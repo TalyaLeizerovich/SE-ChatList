@@ -1,0 +1,12 @@
+pyodbc>=4.0.0
+transformers
+torch
+sentencepiece
+nltk
+python-dateutil
+hf_xet
+fastapi==0.111.1         
+uvicorn[standard]==0.25.0 
+
+
+

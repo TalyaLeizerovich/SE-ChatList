@@ -1,5 +1,5 @@
+from altair import Dict
 import pyodbc
-import json
 from datetime import datetime
 
 # --- Connect to SOMEE DB ---
@@ -69,3 +69,58 @@ def save_task_to_db(task):
 
 
 
+def get_tasks_from_db() -> list[Dict]:
+    """
+    Retrieves all tasks from the SOMEE SQL Server DB and formats them 
+    as a list of dictionaries for the Gradio frontend.
+    """
+    conn = None
+    tasks = []
+    
+    try:
+        conn = pyodbc.connect(conn_str)
+        cursor = conn.cursor()
+        
+        # NOTE: If your Tasks table has a primary key (e.g., ID), you should SELECT it,
+        # especially if you plan to implement 'Mark as Done' functionality later.
+        # We also assume 'sender_name' is the column that holds the sender's name.
+        select_query = """
+        SELECT content, date, time, sender_name, group_name
+        FROM Tasks
+        -- NOTE: Add WHERE condition here if you track completion status, e.g., WHERE IsCompleted = 0
+        ORDER BY date DESC, time DESC
+        """
+        cursor.execute(select_query)
+        rows = cursor.fetchall()
+
+        # pyodbc returns rows as tuples/pyodbc.Row, so we map them to dictionaries
+        for row in rows:
+            
+            # The row object is a tuple, so we access fields by index or name (if using named_columns=True)
+            # Assuming the order is: content, date, time, sender_name, group_name
+            
+            # Convert date/time objects to string formats expected by Gradio
+            date_str = row[1].strftime("%Y-%m-%d") if row[1] else "N/A"
+            time_str = row[2].strftime("%H:%M:%S") if row[2] else "N/A"
+            
+            tasks.append({
+                "content": row[0],
+                "date": date_str,
+                "time": time_str,
+                "from": row[3],      # The frontend expects the key 'from'
+                "group": row[4]
+            })
+
+        cursor.close()
+        conn.close()
+        return tasks
+
+    except pyodbc.Error as e:
+        print(f"SQL Error fetching tasks: {e}")
+        return []
+    except Exception as e:
+        print(f"General Error fetching tasks: {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()

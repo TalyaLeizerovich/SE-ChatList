@@ -85,4 +85,5 @@ def process_json_file(input_file: str, output_file: str):
 
 
 if __name__ == "__main__":
-    process_json_file("C:/softwareEngineer/ChatList/backend/raw_messages.json", "C:/softwareEngineer/ChatList/backend/processed_messages.json")
+    #process_json_file("C:/softwareEngineer/ChatList/backend/raw_messages.json", "C:/softwareEngineer/ChatList/backend/processed_messages.json")
+    process_json_file("raw_messages.json", "processed_messages.json")

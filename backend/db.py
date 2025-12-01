@@ -123,4 +123,7 @@ def get_tasks_from_db() -> list[Dict]:
         return []
     finally:
         if conn:
-            conn.close()
+            try:
+                conn.close()
+            except:
+                pass

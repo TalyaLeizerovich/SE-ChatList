@@ -5,16 +5,13 @@ from datetime import datetime
 import uvicorn
 from fastapi import FastAPI, HTTPException
 
-
 # Import existing modules
 import processing
 import db
 
-
 # ==================== Configuration ====================
 RAW_MESSAGES_FILE = "raw_messages.json"
 PROCESSED_MESSAGES_FILE = "processed_messages.json"
-
 
 # --------------------
 # Ensure processed JSON exists
@@ -30,9 +27,7 @@ def ensure_processed_file_exists():
     except Exception as e:
         raise
 
-
 ensure_processed_file_exists()
-
 
 # ==================== FastAPI App ====================
 app = FastAPI(
@@ -40,7 +35,6 @@ app = FastAPI(
     description="Process WhatsApp messages and load tasks to database",
     version="1.0.0"
 )
-
 
 # --------------------
 # Startup event - run all automatically
@@ -61,7 +55,6 @@ def startup_event():
     except Exception as e:
         print(f"Error during startup pipeline: {e}")
 
-
 # ==================== Endpoints ====================
 @app.get("/")
 def root():
@@ -77,16 +70,13 @@ def root():
         }
     }
 
-
 @app.get("/health")
 def health_check():
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
-
 @app.get("/processed_tasks")
 def get_processed_tasks():
     return db.get_tasks_from_db()
-
 
 @app.post("/process")
 def process_messages():
@@ -97,7 +87,6 @@ def process_messages():
         return {"status": "success", "tasks_found": len(tasks)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 @app.post("/load-db")
 def load_to_database():
@@ -111,7 +100,6 @@ def load_to_database():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @app.post("/run-all")
 def run_complete_pipeline():
     try:
@@ -124,17 +112,12 @@ def run_complete_pipeline():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 # ==================== CLI Commands ====================
 def cli_serve():
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
-
 
 if __name__ == "__main__":
     if len(sys.argv) >= 2 and sys.argv[1].lower() == "serve":
         cli_serve()
     else:
         print("Use 'serve' to start the server: python main.py serve")
-
-
-

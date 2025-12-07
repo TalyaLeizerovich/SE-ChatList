@@ -2,7 +2,6 @@ from altair import Dict
 import pyodbc
 from datetime import datetime
 
-
 # --- Connect to SOMEE DB ---
 conn_str = (
     "DRIVER={ODBC Driver 18 for SQL Server};"
@@ -15,7 +14,6 @@ conn_str = (
         "DATABASE=ChatListDB;"
 )
 
-
 def task_exists(cursor, content, date_obj, time_obj, sender_name, group_name):
     """Checks if a task with the same details already exists"""
     query = """
@@ -26,7 +24,6 @@ def task_exists(cursor, content, date_obj, time_obj, sender_name, group_name):
     count = cursor.fetchone()[0]
     return count > 0
 
-
 def save_task_to_db(task):
     content = task.get("content", "")
     date_str = task.get("date", "")
@@ -34,30 +31,25 @@ def save_task_to_db(task):
     sender_name = task.get("from", "")
     group_name = task.get("group", "")
 
-
     try:
         date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
     except:
         date_obj = None
-
 
     try:
         time_obj = datetime.strptime(time_str, "%H:%M:%S").time()
     except:
         time_obj = None
 
-
     try:
         conn = pyodbc.connect(conn_str)
         cursor = conn.cursor()
-
 
         # Check if task already exists
         if task_exists(cursor, content, date_obj, time_obj, sender_name, group_name):
             cursor.close()
             conn.close()
             return {"status": "skipped", "message": "Task already exists in DB."}
-
 
         # Insert task into table
         insert_query = """
@@ -67,34 +59,28 @@ def save_task_to_db(task):
         cursor.execute(insert_query, content, date_obj, time_obj, sender_name, group_name)
         conn.commit()
 
-
         cursor.close()
         conn.close()
 
-
         return {"status": "success", "message": "Task added to DB."}
-
 
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
 
 
-
-
-
 def get_tasks_from_db() -> list[Dict]:
     """
-    Retrieves all tasks from the SOMEE SQL Server DB and formats them
+    Retrieves all tasks from the SOMEE SQL Server DB and formats them 
     as a list of dictionaries for the Gradio frontend.
     """
     conn = None
     tasks = []
-   
+    
     try:
         conn = pyodbc.connect(conn_str)
         cursor = conn.cursor()
-       
+        
         # NOTE: If your Tasks table has a primary key (e.g., ID), you should SELECT it,
         # especially if you plan to implement 'Mark as Done' functionality later.
         # We also assume 'sender_name' is the column that holds the sender's name.
@@ -107,17 +93,16 @@ def get_tasks_from_db() -> list[Dict]:
         cursor.execute(select_query)
         rows = cursor.fetchall()
 
-
         # pyodbc returns rows as tuples/pyodbc.Row, so we map them to dictionaries
         for row in rows:
-           
+            
             # The row object is a tuple, so we access fields by index or name (if using named_columns=True)
             # Assuming the order is: content, date, time, sender_name, group_name
-           
+            
             # Convert date/time objects to string formats expected by Gradio
             date_str = row[1].strftime("%Y-%m-%d") if row[1] else "N/A"
             time_str = row[2].strftime("%H:%M:%S") if row[2] else "N/A"
-           
+            
             tasks.append({
                 "content": row[0],
                 "date": date_str,
@@ -126,11 +111,9 @@ def get_tasks_from_db() -> list[Dict]:
                 "group": row[4]
             })
 
-
         cursor.close()
         conn.close()
         return tasks
-
 
     except pyodbc.Error as e:
         print(f"SQL Error fetching tasks: {e}")

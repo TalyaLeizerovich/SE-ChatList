@@ -1,4 +1,4 @@
-from altair import Dict
+
 import pyodbc
 from datetime import datetime
 

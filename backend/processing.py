@@ -1,18 +1,23 @@
-
 import json
 import re
 from transformers import pipeline
 
-
+# ================================
+# מודל משופר ל-classification
+# ================================
+# מבוסס על DistilBERT ל-zero-shot classification כדי לזהות משימות בצורה סמנטית
 action_classifier = pipeline(
     "zero-shot-classification",
-    model="facebook/bart-large-mnli"
+    model="typeform/distilbert-base-uncased-mnli"
 )
 
-
+# ================================
+# מודל משופר ל-task extraction
+# ================================
+# מבוסס על Flan-T5 גדול יותר לדיוק בחילוץ פעולה
 task_extractor = pipeline(
     "text2text-generation",
-    model="google/flan-t5-small"
+    model="google/flan-t5-base"
 )
 
 CANDIDATE_LABELS = ["task", "not_task"]
@@ -33,24 +38,20 @@ def extract_task_from_text(text: str) -> str:
     return result.strip()
 
 def heuristic_fix(task_text: str, original_text: str) -> str:
-    
     if re.match(r"i('m| will)", task_text.lower()):
         match = re.search(r"(bring|send|upload|prepare|finish|review|update|schedule).+", original_text, re.IGNORECASE)
         if match:
             return match.group(0)
     return task_text
 
-
 def process_message(msg_obj: dict):
     content = msg_obj.get("content", "").strip()
     if not content:
         return None
 
-    
     if not is_actionable(content):
         return None
 
-    
     task_text = extract_task_from_text(content)
     task_text = heuristic_fix(task_text, content)
 
@@ -64,8 +65,6 @@ def process_message(msg_obj: dict):
         "from": msg_obj.get("from"),
         "group": msg_obj.get("group")
     }
-
-
 
 def process_json_file(input_file: str, output_file: str):
     with open(input_file, "r", encoding="utf-8") as f:
@@ -83,7 +82,5 @@ def process_json_file(input_file: str, output_file: str):
 
     print(f"Processed {len(results)} tasks → saved to {output_file}")
 
-
 if __name__ == "__main__":
-    #process_json_file("C:/softwareEngineer/ChatList/backend/raw_messages.json", "C:/softwareEngineer/ChatList/backend/processed_messages.json")
     process_json_file("raw_messages.json", "processed_messages.json")

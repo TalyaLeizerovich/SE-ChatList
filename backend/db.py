@@ -144,8 +144,3 @@ def get_tasks_from_db() -> list[Dict]:
                 conn.close()
             except:
                 pass
-
-
-
-
-

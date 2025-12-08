@@ -1,2 +1,4 @@
 # Ignore Python virtual environment
 venv/
+# Ignore WhatsApp profile data
+whatsapp_profile/

@@ -130,6 +130,8 @@ import os
 from datetime import datetime
 import uvicorn
 from fastapi import FastAPI, HTTPException
+from fastapi import Body
+
 
 # Import existing modules
 import controllers.processing as processing
@@ -251,6 +253,19 @@ def load_to_database():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/delete_tasks")
+def delete_task(task: dict = Body(...)):
+    """
+    Delete a task from the database.
+    Expects the task dictionary to contain at least:
+    content, date, time, from, group
+    """
+    try:
+        result = db.delete_task_from_db(task)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
 @app.post("/run-all")
 def run_complete_pipeline():
     """Run complete pipeline: Scrape → Process → Load to DB"""

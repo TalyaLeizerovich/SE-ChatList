@@ -151,6 +151,8 @@ from typing import List
 
 # ==================== CONFIG ====================
 API_URL = "http://127.0.0.1:8000/processed_tasks"
+API_DELETE_URL = "http://127.0.0.1:8000/delete_tasks"
+
 
 WHATSAPP_GREEN_DARK = "#075e54"
 WHATSAPP_BACKGROUND = "#e7fce3"  # <<< UPDATED TO MINT GREEN >>> 
@@ -186,6 +188,20 @@ def get_processed_tasks() -> List[dict]:
 
     return processed_tasks
 
+def delete_task_via_api(task: dict) -> dict:
+    """
+    Deletes the given task by calling the backend API.
+    Expects the backend to handle deletion by task details.
+    """
+    try:
+        response = requests.post(API_DELETE_URL, json=task, timeout=5)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return {"status": "error", "message": f"API returned {response.status_code}"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+    
 
 # ==================== STREAMLIT UI ====================
 st.set_page_config(page_title="ChatList Task Processor", layout="wide")
@@ -350,6 +366,8 @@ else:
         key = f"task_done_{task['id']}"
         if st.session_state.get(key, False):
             removed_any = True
+            # Delete from DB
+            delete_task_via_api(task)
         else:
             remaining_tasks.append(task)
 

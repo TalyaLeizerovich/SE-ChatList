@@ -3,9 +3,7 @@ import re
 import requests
 import os
 
-# ------------------------------------------------------
-# הרצת מודל Llama3 ב–Ollama (ללא שינוי!)
-# ------------------------------------------------------
+#llama3 
 def ollama_generate(prompt: str):
     try:
         response = requests.post(
@@ -27,9 +25,7 @@ def ollama_generate(prompt: str):
     except Exception as e:
         raise RuntimeError(f"Ollama error: {str(e)}")
 
-# ------------------------------------------------------
-# לוגיקה — ללא שינוי!
-# ------------------------------------------------------
+
 CANDIDATE_LABELS = ["task", "not_task"]
 
 
@@ -89,28 +85,26 @@ def process_message(msg_obj: dict):
     }
 
 
-# ------------------------------------------------------
-# 🔥 הפתרון היחיד הדרוש — בלי לגעת בלוגיקה 🔥
-# ------------------------------------------------------
+
 def process_json_file(input_file: str, output_file: str):
 
-    # יצירת תיקיית controllers במידת הצורך
+    
     input_dir = os.path.dirname(input_file)
     if input_dir and not os.path.exists(input_dir):
         print(f"[INFO] Creating missing directory: {input_dir}")
         os.makedirs(input_dir, exist_ok=True)
 
-    # אם קובץ raw_messages.json לא קיים → ניצור קובץ ריק
+    
     if not os.path.exists(input_file):
         print(f"[INFO] Creating missing file: {input_file}")
         with open(input_file, "w", encoding="utf-8") as f:
             json.dump([], f)
 
-    # עכשיו הקריאה תעבוד בטוח
+    
     with open(input_file, "r", encoding="utf-8") as f:
         messages = json.load(f)
 
-    # עיבוד = ללא שינוי
+    
     results = []
     for msg in messages:
         processed = process_message(msg)

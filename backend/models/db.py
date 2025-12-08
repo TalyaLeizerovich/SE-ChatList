@@ -1,6 +1,7 @@
 from altair import Dict
 import pyodbc
 from datetime import datetime
+import re
 
 # --- Connect to SOMEE DB ---
 conn_str = (
@@ -13,6 +14,37 @@ conn_str = (
         "Connection Timeout=30;"
         "DATABASE=ChatListDB;"
 )
+
+def is_empty_or_invalid_content(content):
+    if content is None or content == "":
+        return True
+    
+    
+    content_lower = content.strip().lower()
+    
+    
+    invalid_phrases = [
+        "none",
+        "no task",
+        "no actionable task",
+        "there is no task",
+        "there is no actionable task",
+        "no action required",
+        "not a task",
+        "not actionable",
+        "n/a",
+    ]
+    
+    
+    for phrase in invalid_phrases:
+        if phrase in content_lower:
+            return True
+    
+    
+    if re.match(r'^none[.,!?\s]*$', content_lower):
+        return True
+    
+    return False
 
 def task_exists(cursor, content, date_obj, time_obj, sender_name, group_name):
     """Checks if a task with the same details already exists"""
@@ -30,6 +62,10 @@ def save_task_to_db(task):
     time_str = task.get("time", "")
     sender_name = task.get("from", "")
     group_name = task.get("group", "")
+
+    
+    if is_empty_or_invalid_content(content):
+        return {"status": "skipped", "message": "Task with empty or None content was not added to DB."}
 
     try:
         date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
@@ -127,3 +163,42 @@ def get_tasks_from_db() -> list[Dict]:
                 conn.close()
             except:
                 pass
+
+
+def delete_task_from_db(task):
+    """
+    Deletes a task from the Tasks table based on all identifying fields.
+    """
+    content = task.get("content", "")
+    date_str = task.get("date", "")
+    time_str = task.get("time", "")
+    sender_name = task.get("from", "")
+    group_name = task.get("group", "")
+
+    try:
+        date_obj = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else None
+    except:
+        date_obj = None
+
+    try:
+        time_obj = datetime.strptime(time_str, "%H:%M:%S").time() if time_str else None
+    except:
+        time_obj = None
+
+    try:
+        conn = pyodbc.connect(conn_str)
+        cursor = conn.cursor()
+
+        delete_query = """
+        DELETE FROM Tasks
+        WHERE content = ? AND date = ? AND time = ? AND sender_name = ? AND group_name = ?
+        """
+        cursor.execute(delete_query, content, date_obj, time_obj, sender_name, group_name)
+        conn.commit()
+
+        cursor.close()
+        conn.close()
+        return {"status": "success", "message": "Task deleted from DB."}
+
+    except Exception as e:
+        return {"status": "error", "message": str(e)}

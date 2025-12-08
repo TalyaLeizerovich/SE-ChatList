@@ -144,102 +144,6 @@
 
 
 
-
-# import os
-# import sys
-# import json
-# import requests
-# import pandas as pd
-# import streamlit as st
-# from typing import List
-
-# # ==================== FIX: PATH ====================
-# current_dir = os.path.dirname(os.path.abspath(__file__))
-# root_dir = os.path.dirname(current_dir)
-# sys.path.append(root_dir)
-
-# # ==================== CONFIG ====================
-# API_URL = "http://127.0.0.1:8000/processed_tasks"
-
-# WHATSAPP_GREEN_DARK = "#075e54"
-# WHATSAPP_BACKGROUND = "#F0F0F0"
-
-
-# # ==================== UTILS ====================
-# def get_processed_tasks_gradio() -> List[dict]:
-#     """Fetch tasks from backend via GET request and return list of dicts."""
-#     try:
-#         response = requests.get(API_URL, timeout=5)
-#         if response.status_code == 200:
-#             return response.json()
-#         return []
-#     except Exception:
-#         return []
-
-
-# # ==================== STREAMLIT UI ====================
-
-# st.set_page_config(
-#     page_title="ChatList Task Processor",
-#     layout="wide",
-# )
-
-# # ---- Custom CSS ----
-# st.markdown(f"""
-# <style>
-# body {{
-#     background-color: {WHATSAPP_BACKGROUND} !important;
-#     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-# }}
-# .title {{
-#     color: {WHATSAPP_GREEN_DARK};
-#     font-weight: 700;
-#     font-size: 2rem;
-# }}
-# .subtitle {{
-#     color: #444;
-#     font-size: 1rem;
-#     font-weight: 500;
-# }}
-# .empty-message {{
-#     text-align: center;
-#     color: #666;
-#     font-size: 1.2rem;
-#     padding: 30px 0;
-# }}
-# </style>
-# """, unsafe_allow_html=True)
-
-
-# # ---- Branding ----
-# st.markdown("<div class='title'>ChatList</div>", unsafe_allow_html=True)
-# st.markdown("<div class='subtitle'>Turning Group Chat Chaos into a To-Do Checklist</div>", unsafe_allow_html=True)
-# st.write("")
-
-
-# # ---- Load Tasks ----
-# tasks = get_processed_tasks_gradio()
-
-# if not tasks:
-#     # Cute empty state message
-#     st.markdown("<div class='empty-message'>🎉 No tasks to show — you're all caught up!</div>", unsafe_allow_html=True)
-
-# else:
-#     st.markdown("### Tasks")
-
-#     # ---- Display tasks as expandable cards ----
-#     for task in tasks:
-#         title = task.get("content", "Untitled Task")
-
-#         with st.expander(title, expanded=False):
-#             st.write(f"**Sender:** {task.get('from', 'N/A')}")
-#             st.write(f"**Group:** {task.get('group', 'N/A')}")
-#             st.write(f"**Date:** {task.get('date', 'N/A')}")
-#             st.write(f"**Time:** {task.get('time', 'N/A')}")
-
-
-
-
 import uuid
 import requests
 import streamlit as st
@@ -256,42 +160,32 @@ TASK_BORDER_RADIUS = "12px"
 # ==================== UTILS ====================
 def get_processed_tasks() -> List[dict]:
     """
-    Fetch processed tasks from backend API.
-    Returns demo tasks if API fails or returns no data.
+    Fetch tasks from the backend (DB / API) and format for Streamlit display.
+    Adds a 'done' flag (default False) for checkbox handling.
     """
     try:
         response = requests.get(API_URL, timeout=5)
         if response.status_code == 200:
-            data = response.json()
-            if data:
-                return data
+            tasks = response.json()
+        else:
+            tasks = []
     except Exception:
-        pass
+        tasks = []
 
-    # Demo fallback tasks
-    return [
-        {
-            "content": "Buy snacks for the class party",
-            "from": "Dana",
-            "group": "Class Parents",
-            "date": "2025-12-07",
-            "time": "09:15"
-        },
-        {
-            "content": "Prepare summary of Sprint 12 meeting",
-            "from": "Team Leader",
-            "group": "Work Project",
-            "date": "2025-12-07",
-            "time": "11:00"
-        },
-        {
-            "content": "Call the electricity company about the bill",
-            "from": "Mom",
-            "group": "Family",
-            "date": "2025-12-07",
-            "time": "14:30"
-        }
-    ]
+    processed_tasks = []
+    for task in tasks:
+        processed_tasks.append({
+            "id": str(uuid.uuid4()),        # stable unique ID
+            "content": task.get("content", ""),
+            "from": task.get("from", ""),
+            "group": task.get("group", ""),
+            "date": task.get("date", ""),
+            "time": task.get("time", ""),
+            "done": False                   # for Streamlit checkbox
+        })
+
+    return processed_tasks
+
 
 # ==================== STREAMLIT UI ====================
 st.set_page_config(page_title="ChatList Task Processor", layout="wide")

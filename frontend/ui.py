@@ -244,6 +244,7 @@
 
 import os
 import sys
+import uuid
 import requests
 import streamlit as st
 from typing import List
@@ -252,8 +253,8 @@ from typing import List
 API_URL = "http://127.0.0.1:8000/processed_tasks"
 
 WHATSAPP_GREEN_DARK = "#075e54"
-WHATSAPP_BACKGROUND = "#ECE5DD"  # light WhatsApp-like gray
-TASK_BG = "#FFFFFF"  # task background
+WHATSAPP_BACKGROUND = "#ECE5DD"
+TASK_BG = "#FFFFFF"
 TASK_BORDER_RADIUS = "12px"
 
 # ==================== UTILS ====================
@@ -306,37 +307,29 @@ body {{
     background-color: {WHATSAPP_BACKGROUND};
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }}
-
-/* Main title and subtitle */
 .title {{
     color: {WHATSAPP_GREEN_DARK};
     font-weight: 700;
-    font-size: 3rem;  /* scaled up */
+    font-size: 3rem;
     margin-bottom: 0;
 }}
 .subtitle {{
     color: #444;
-    font-size: 1.5rem;  /* scaled up proportionally */
+    font-size: 1.5rem;
     font-weight: 500;
     margin-top: 4px;
 }}
-
-/* "Your Tasks for Today" header */
 .task-header {{
     font-size: 2rem;
     font-weight: 600;
     margin-bottom: 16px;
 }}
-
-/* Empty message styling */
 .empty-message {{
     text-align: center;
     color: #666;
     font-size: 1.5rem;
     padding: 40px 0;
 }}
-
-/* Task row container */
 .task-row {{
     display: flex;
     align-items: center;
@@ -347,8 +340,6 @@ body {{
     margin-bottom: 12px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }}
-
-/* Task content inside row */
 .task-content {{
     font-size: 1.5rem;
     line-height: 2rem;
@@ -357,8 +348,6 @@ body {{
     font-size: 1.2rem;
     color: #555;
 }}
-
-/* Share links styling */
 .share-link {{
     display: inline-block;
     padding: 6px 10px;
@@ -382,50 +371,89 @@ st.write("")
 
 # ====================== SESSION STATE ======================
 if "tasks" not in st.session_state:
-    st.session_state.tasks = get_processed_tasks()
+    # load tasks and ensure each task has a stable unique id
+    tasks = get_processed_tasks()
+    for t in tasks:
+        if "id" not in t:
+            t["id"] = str(uuid.uuid4())
+    st.session_state.tasks = tasks
+else:
+    # in case tasks were loaded previously but some items lack id (defensive)
+    for t in st.session_state.tasks:
+        if "id" not in t:
+            t["id"] = str(uuid.uuid4())
 
 # ====================== MAIN SCREEN ======================
 if not st.session_state.tasks:
     st.markdown("<div class='empty-message'>🎉 No tasks to show — you're all caught up!</div>", unsafe_allow_html=True)
+
 else:
     st.markdown("<div class='task-header'>Your Tasks for Today</div>", unsafe_allow_html=True)
-    
-    to_remove = []  # list of task indices to remove after iteration
 
-    for idx, task in enumerate(list(st.session_state.tasks)):
-        # Columns: left = checkbox, right = task content
+    # We will not use index-based keys for permanence. Use stable id-based keys.
+    # Render all tasks and their checkboxes (keys based on task id).
+    for task in st.session_state.tasks:
+        task_id = task["id"]
         cols = st.columns([0.05, 0.95])
         done_col, content_col = cols
 
-        # ---- Checkbox ----
+        # ---------- CHECKBOX ----------
         with done_col:
-            checkbox_key = f"done_{idx}"
-            if checkbox_key not in st.session_state:
-                st.session_state[checkbox_key] = False
-            done_clicked = st.checkbox("", value=st.session_state[checkbox_key], key=checkbox_key)
-            if done_clicked:
-                to_remove.append(idx)
+            # Use a stable key based on the task id (not the list index).
+            checkbox_key = f"task_done_{task_id}"
+            # Default value is False unless session_state already has it.
+            checked = st.checkbox("", key=checkbox_key)
 
-        # ---- Task content ----
+        # ---------- TASK CONTENT + EXPANDER ----------
         with content_col:
-            st.markdown(f"""
-            <div class='task-row'>
-                <div class='task-content'>
-                    <strong>{task.get('content','Untitled Task')}</strong><br>
-                    <small>Sender: {task.get('from','N/A')} | Group: {task.get('group','N/A')}</small><br>
-                    <small>Date: {task.get('date','N/A')} {task.get('time','N/A')}</small><br>
-                    <div style='margin-top:4px;'>
-                        <a class='share-link' href='#'>📅 Google Calendar</a>
-                        <a class='share-link' href='#'>📝 Notes</a>
-                        <a class='share-link' href='#'>👨‍👩‍👧 Family Member</a>
+            # Expander that contains details + share buttons
+            with st.expander(task.get("content", "Task")):
+                st.markdown(f"""
+                <div class='task-row'>
+                    <div class='task-content'>
+                        <strong>{task.get('content','Untitled Task')}</strong><br>
+                        <small>Sender: {task.get('from','N/A')} | Group: {task.get('group','N/A')}</small><br>
+                        <small>Date: {task.get('date','N/A')} {task.get('time','N/A')}</small><br>
                     </div>
                 </div>
-            </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
 
-    # Remove checked tasks after iteration (from last to first to avoid index shift)
-    for remove_idx in sorted(to_remove, reverse=True):
-        st.session_state.tasks.pop(remove_idx)
-        key_to_del = f"done_{remove_idx}"
-        if key_to_del in st.session_state:
-            del st.session_state[key_to_del]
+                # --------- SHARE OPTIONS (placeholders) ---------
+                st.write("### Share this task:")
+                share_text = f"{task.get('content','Task')}"
+                whatsapp_url = f"https://wa.me/?text={share_text.replace(' ', '%20')}"
+                google_calendar_url = "https://calendar.google.com"  # placeholder, replace with real event link if desired
+                family_url = "https://family-app.example.com/share"  # placeholder
+
+                st.markdown(
+                    f"""
+                    <a class='share-link' href='{whatsapp_url}' target='_blank'>WhatsApp</a>
+                    <a class='share-link' href='{google_calendar_url}' target='_blank'>Google Calendar</a>
+                    <a class='share-link' href='{family_url}' target='_blank'>Share with Family</a>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+    # ---------- COLLECT CHECKED TASKS (by id) ----------
+    # Build the new tasks list by keeping only unchecked tasks.
+    remaining_tasks = []
+    removed_any = False
+    for task in st.session_state.tasks:
+        key = f"task_done_{task['id']}"
+        if st.session_state.get(key, False):
+            # This task was checked -> remove it
+            removed_any = True
+        else:
+            remaining_tasks.append(task)
+
+    if removed_any:
+        # Update the session tasks to the filtered list
+        st.session_state.tasks = remaining_tasks
+
+        # Clean up all task_done_ keys from session_state to avoid stale keys
+        for k in list(st.session_state.keys()):
+            if k.startswith("task_done_"):
+                del st.session_state[k]
+
+        # Rerun to immediately reflect the updated list in the UI
+        st.rerun()

@@ -240,10 +240,6 @@
 
 
 
-
-
-import os
-import sys
 import uuid
 import requests
 import streamlit as st
@@ -253,7 +249,7 @@ from typing import List
 API_URL = "http://127.0.0.1:8000/processed_tasks"
 
 WHATSAPP_GREEN_DARK = "#075e54"
-WHATSAPP_BACKGROUND = "#ECE5DD"
+WHATSAPP_BACKGROUND = "#e7fce3"  # <<< UPDATED TO MINT GREEN >>> 
 TASK_BG = "#FFFFFF"
 TASK_BORDER_RADIUS = "12px"
 
@@ -303,10 +299,20 @@ st.set_page_config(page_title="ChatList Task Processor", layout="wide")
 # ---- Custom CSS ----
 st.markdown(f"""
 <style>
+
+/* <<< NEW GLOBAL MINT GREEN BACKGROUND >>> */
 body {{
-    background-color: {WHATSAPP_BACKGROUND};
+    background-color: {WHATSAPP_BACKGROUND} !important;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }}
+[data-testid="stAppViewContainer"] {{
+    background-color: {WHATSAPP_BACKGROUND} !important;
+}}
+[data-testid="stMain"] {{
+    background-color: {WHATSAPP_BACKGROUND} !important;
+}}
+
+/* Titles */
 .title {{
     color: {WHATSAPP_GREEN_DARK};
     font-weight: 700;
@@ -319,17 +325,28 @@ body {{
     font-weight: 500;
     margin-top: 4px;
 }}
+
+/* <<< NEW SMALLER HEADER >>> */
+.task-header-small {{
+    font-size: 1.8rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: #333;
+}}
+
 .task-header {{
     font-size: 2rem;
     font-weight: 600;
     margin-bottom: 16px;
 }}
+
 .empty-message {{
     text-align: center;
     color: #666;
     font-size: 1.5rem;
     padding: 40px 0;
 }}
+
 .task-row {{
     display: flex;
     align-items: center;
@@ -340,14 +357,17 @@ body {{
     margin-bottom: 12px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }}
+
 .task-content {{
     font-size: 1.5rem;
     line-height: 2rem;
 }}
+
 .task-content small {{
     font-size: 1.2rem;
     color: #555;
 }}
+
 .share-link {{
     display: inline-block;
     padding: 6px 10px;
@@ -358,11 +378,14 @@ body {{
     margin-right: 8px;
     font-size: 1.2rem;
 }}
+
 .share-link:hover {{
     background: #e6e6e6;
 }}
+
 </style>
 """, unsafe_allow_html=True)
+
 
 # ---- Branding ----
 st.markdown("<div class='title'>ChatList</div>", unsafe_allow_html=True)
@@ -371,14 +394,12 @@ st.write("")
 
 # ====================== SESSION STATE ======================
 if "tasks" not in st.session_state:
-    # load tasks and ensure each task has a stable unique id
     tasks = get_processed_tasks()
     for t in tasks:
         if "id" not in t:
             t["id"] = str(uuid.uuid4())
     st.session_state.tasks = tasks
 else:
-    # in case tasks were loaded previously but some items lack id (defensive)
     for t in st.session_state.tasks:
         if "id" not in t:
             t["id"] = str(uuid.uuid4())
@@ -388,25 +409,20 @@ if not st.session_state.tasks:
     st.markdown("<div class='empty-message'>🎉 No tasks to show — you're all caught up!</div>", unsafe_allow_html=True)
 
 else:
-    st.markdown("<div class='task-header'>Your Tasks for Today</div>", unsafe_allow_html=True)
+    st.markdown("<div class='task-header-small'>Your Tasks for Today</div>", unsafe_allow_html=True)
 
-    # We will not use index-based keys for permanence. Use stable id-based keys.
-    # Render all tasks and their checkboxes (keys based on task id).
     for task in st.session_state.tasks:
         task_id = task["id"]
         cols = st.columns([0.05, 0.95])
         done_col, content_col = cols
 
-        # ---------- CHECKBOX ----------
+        # Checkbox
         with done_col:
-            # Use a stable key based on the task id (not the list index).
             checkbox_key = f"task_done_{task_id}"
-            # Default value is False unless session_state already has it.
             checked = st.checkbox("", key=checkbox_key)
 
-        # ---------- TASK CONTENT + EXPANDER ----------
+        # Task content in expander
         with content_col:
-            # Expander that contains details + share buttons
             with st.expander(task.get("content", "Task")):
                 st.markdown(f"""
                 <div class='task-row'>
@@ -418,12 +434,11 @@ else:
                 </div>
                 """, unsafe_allow_html=True)
 
-                # --------- SHARE OPTIONS (placeholders) ---------
                 st.write("### Share this task:")
                 share_text = f"{task.get('content','Task')}"
                 whatsapp_url = f"https://wa.me/?text={share_text.replace(' ', '%20')}"
-                google_calendar_url = "https://calendar.google.com"  # placeholder, replace with real event link if desired
-                family_url = "https://family-app.example.com/share"  # placeholder
+                google_calendar_url = "https://calendar.google.com"
+                family_url = "https://family-app.example.com/share"
 
                 st.markdown(
                     f"""
@@ -434,26 +449,21 @@ else:
                     unsafe_allow_html=True
                 )
 
-    # ---------- COLLECT CHECKED TASKS (by id) ----------
-    # Build the new tasks list by keeping only unchecked tasks.
+    # Remove checked tasks
     remaining_tasks = []
     removed_any = False
     for task in st.session_state.tasks:
         key = f"task_done_{task['id']}"
         if st.session_state.get(key, False):
-            # This task was checked -> remove it
             removed_any = True
         else:
             remaining_tasks.append(task)
 
     if removed_any:
-        # Update the session tasks to the filtered list
         st.session_state.tasks = remaining_tasks
 
-        # Clean up all task_done_ keys from session_state to avoid stale keys
         for k in list(st.session_state.keys()):
             if k.startswith("task_done_"):
                 del st.session_state[k]
 
-        # Rerun to immediately reflect the updated list in the UI
         st.rerun()

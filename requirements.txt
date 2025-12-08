@@ -6,6 +6,9 @@ nltk
 hf_xet
 fastapi >= 0.115.2       
 uvicorn[standard]==0.25.0 
+requests
+pandas
+streamlit
 selenium==4.15.0
 #selenium>=4.15.0,<5.0.0
 webdriver-manager>=4.0.0,<5.0.0

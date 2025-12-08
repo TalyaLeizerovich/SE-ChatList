@@ -1,20 +1,13 @@
 # Introduction 
-TODO: Give a short introduction of your project. Let this section explain the objectives or the motivation behind this project. 
+ChatList is an AI-powered assistant that filters, summarizes, and extracts action items from noisy WhatsApp group conversations. It uses NLP and contextual analysis to identify important reminders, deadlines, and events, generating a clear, personalized daily checklist for each user. The project aims to reduce message overload and help families and students stay organized without missing critical information. 
 
 # Getting Started
-TODO: Guide users through getting your code up and running on their own system. In this section you can talk about:
-1.	Installation process
-2.	Software dependencies
-3.	Latest releases
-4.	API references
+1.	Make sure you have 3.10 python
+2.	Make sure you have virtual enviroment (venv)
+3.	Open CMD and run: pip install -r requirements.txt
 
 # Build and Test
-TODO: Describe and show how to build your code and run the tests. 
+1. In the first CMD run: uvicorn main:app --port 8000
+2. In the second CMD run: C:\softwareEngineer\ChatList\frontend\views\ui.py 
+Note: During the launch, you will probably see a WhatsApp QR code. Scan it using your WhatsApp account via linked devices.
 
-# Contribute
-TODO: Explain how other users and developers can contribute to make your code better. 
-
-If you want to learn more about creating good readme files then refer the following [guidelines](https://docs.microsoft.com/en-us/azure/devops/repos/git/create-a-readme?view=azure-devops). You can also seek inspiration from the below readme files:
-- [ASP.NET Core](https://github.com/aspnet/Home)
-- [Visual Studio Code](https://github.com/Microsoft/vscode)
-- [Chakra Core](https://github.com/Microsoft/ChakraCore)

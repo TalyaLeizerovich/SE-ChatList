@@ -193,15 +193,15 @@ with col2:
             if result.get("status") == "success":
                 new_count = result.get("new_tasks_found", 0)
                 if new_count > 0:
-                    st.success(f"✅ Found {new_count} new tasks!")
+                    st.success(f"Found {new_count} new tasks!")
                 else:
-                    st.info("ℹ️ No new tasks found")
+                    st.info("No new tasks found")
                 
                 # Reload tasks from DB
                 st.session_state.tasks = get_processed_tasks()
                 st.rerun()
             else:
-                st.error(f"❌ Error: {result.get('message', 'Unknown error')}")
+                st.error(f"Error: {result.get('message', 'Unknown error')}")
 
 # ====================== SESSION STATE ======================
 if "tasks" not in st.session_state:

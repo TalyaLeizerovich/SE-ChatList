@@ -204,15 +204,6 @@ def delete_task_from_db(task):
         return {"status": "error", "message": str(e)} 
     
 
-
-
-
-
-
-
-
-
-#new function
 def get_last_task_timestamp():
     """
     Returns datetime of the latest task in DB (date + time).

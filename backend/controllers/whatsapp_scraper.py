@@ -16,7 +16,7 @@ RAW_MESSAGES_FILE = r"C:\softwareEngineer\ChatList\backend\controllers\raw_messa
 SESSION_PATH = r"C:\softwareEngineer\whatsapp_profile"
 TARGET_GROUP = "ChatList"
 SCROLL_PAUSE = 1.5
-MAX_SCROLLS = 20  # <<< הקטנו - לא צריך הרבה אם רק מהיום
+MAX_SCROLLS = 20  
 
 # ============================
 # UTILITY - COMBINE DATE TIME

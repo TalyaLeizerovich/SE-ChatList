@@ -16,7 +16,7 @@ RAW_MESSAGES_FILE = r"C:\softwareEngineer\ChatList\backend\controllers\raw_messa
 SESSION_PATH = r"C:\softwareEngineer\whatsapp_profile"
 TARGET_GROUP = "ChatList"
 SCROLL_PAUSE = 1.5
-MAX_SCROLLS = 100
+MAX_SCROLLS = 20  # <<< הקטנו - לא צריך הרבה אם רק מהיום
 
 # ============================
 # UTILITY - COMBINE DATE TIME
@@ -142,10 +142,10 @@ def find_chatlist_group(driver):
         return False
 
 # ============================
-# SCROLL CHAT TO TOP
+# SCROLL CHAT (LIGHT SCROLL FOR TODAY ONLY)
 # ============================
 def scroll_chat_to_top(driver):
-    print("\nScrolling up to load older messages...")
+    print("\nScrolling up lightly to load today's messages...")
     
     try:
         chat_container = None
@@ -268,7 +268,7 @@ def scrape_messages(driver):
             except Exception as e:
                 continue
         
-        print(f"Successfully collected {len(results)} messages with valid metadata")
+        print(f"Successfully collected {len(results)} messages")
         
         if len(results) > 0:
             print("\n--- SAMPLE MESSAGE (first one) ---")
@@ -389,20 +389,27 @@ def save_json(data):
         return False
 
 # ============================
-# MAIN - WITH min_datetime SUPPORT
+# MAIN - WITH TODAY FILTER
 # ============================
 def run_scraper(min_datetime: datetime | None = None):
     """
     Main function to run the scraper.
     If min_datetime is provided, only messages sent AFTER it are kept.
+    Otherwise, only messages from TODAY are kept.
     """
     driver = None
     
     try:
         print("=" * 60)
         print("WhatsApp ChatList Scraper")
-        if min_datetime:
+        
+        if min_datetime is None:
+            today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            min_datetime = today_start
+            print(f"Filtering messages from TODAY only: {today_start.strftime('%Y-%m-%d')}")
+        else:
             print(f"Filtering messages after: {min_datetime}")
+        
         print("=" * 60)
         
         driver = open_whatsapp()
@@ -421,19 +428,16 @@ def run_scraper(min_datetime: datetime | None = None):
         
         final_data = convert_to_final_format(scraped)
         
-        # --------- FILTER NEW MESSAGES ONLY ---------
-        if min_datetime:
-            filtered = []
-            
-            for msg in final_data:
-                msg_dt = combine_date_time(msg["date"], msg["time"])
-                if msg_dt and msg_dt > min_datetime:
-                    filtered.append(msg)
-            
-            print(f"\n>>> Filtered {len(filtered)} new messages out of {len(final_data)} total")
-            final_data = filtered
-        else:
-            print(f"\n>>> No min_datetime provided, keeping all {len(final_data)} messages")
+        # --------- FILTER MESSAGES (TODAY OR AFTER min_datetime) ---------
+        filtered = []
+        
+        for msg in final_data:
+            msg_dt = combine_date_time(msg["date"], msg["time"])
+            if msg_dt and msg_dt >= min_datetime:  
+                filtered.append(msg)
+        
+        print(f"\n>>> Filtered {len(filtered)} messages from today out of {len(final_data)} total")
+        final_data = filtered
         
         if save_json(final_data):
             print("\n" + "=" * 60)
@@ -458,3 +462,17 @@ def run_scraper(min_datetime: datetime | None = None):
 
 if __name__ == "__main__":
     run_scraper()
+
+
+
+
+
+
+
+
+
+
+
+
+
+

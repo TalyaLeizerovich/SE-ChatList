@@ -63,7 +63,7 @@ def refresh_new_tasks() -> dict:
     Returns the result including how many new tasks were found.
     """
     try:
-        response = requests.post(API_REFRESH_URL, timeout=120)
+        response = requests.post(API_REFRESH_URL, timeout=180)
         if response.status_code == 200:
             return response.json()
         else:
@@ -161,7 +161,6 @@ body {{
     background: #e6e6e6;
 }}
 
-/* כפתור רענון שקוף עם מסגרת */
 div[data-testid="stButton"] > button {{
     background-color: transparent !important;
     border: 2px solid {WHATSAPP_GREEN_DARK} !important;
@@ -188,7 +187,7 @@ col1, col2 = st.columns([0.85, 0.15])
 
 with col2:
     if st.button("🔄 refrash tasks", use_container_width=True):
-        with st.spinner("Checking for new messages on WhatsApp... (This may take up to 2 minutes)"):
+        with st.spinner("Checking for new messages on WhatsApp... (This may take a few moments.)"):
             result = refresh_new_tasks()
             
             if result.get("status") == "success":

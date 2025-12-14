@@ -19,6 +19,21 @@ SCROLL_PAUSE = 1.5
 MAX_SCROLLS = 100
 
 # ============================
+# UTILITY - COMBINE DATE TIME
+# ============================
+def combine_date_time(date_str, time_str):
+    """
+    Combines date + time strings into datetime object.
+    Expected formats:
+    date: YYYY-MM-DD
+    time: HH:MM
+    """
+    try:
+        return datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+    except Exception:
+        return None
+
+# ============================
 # OPEN WHATSAPP
 # ============================
 def open_whatsapp():
@@ -374,15 +389,20 @@ def save_json(data):
         return False
 
 # ============================
-# MAIN
+# MAIN - WITH min_datetime SUPPORT
 # ============================
-def run_scraper():
-    """Main function to run the scraper - can be called from other modules"""
+def run_scraper(min_datetime: datetime | None = None):
+    """
+    Main function to run the scraper.
+    If min_datetime is provided, only messages sent AFTER it are kept.
+    """
     driver = None
     
     try:
         print("=" * 60)
         print("WhatsApp ChatList Scraper")
+        if min_datetime:
+            print(f"Filtering messages after: {min_datetime}")
         print("=" * 60)
         
         driver = open_whatsapp()
@@ -400,6 +420,20 @@ def run_scraper():
             return False
         
         final_data = convert_to_final_format(scraped)
+        
+        # --------- FILTER NEW MESSAGES ONLY ---------
+        if min_datetime:
+            filtered = []
+            
+            for msg in final_data:
+                msg_dt = combine_date_time(msg["date"], msg["time"])
+                if msg_dt and msg_dt > min_datetime:
+                    filtered.append(msg)
+            
+            print(f"\n>>> Filtered {len(filtered)} new messages out of {len(final_data)} total")
+            final_data = filtered
+        else:
+            print(f"\n>>> No min_datetime provided, keeping all {len(final_data)} messages")
         
         if save_json(final_data):
             print("\n" + "=" * 60)

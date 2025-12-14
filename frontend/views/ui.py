@@ -1,4 +1,3 @@
-
 import uuid
 import requests
 import streamlit as st
@@ -7,10 +6,11 @@ from typing import List
 # ==================== CONFIG ====================
 API_URL = "http://127.0.0.1:8000/processed_tasks"
 API_DELETE_URL = "http://127.0.0.1:8000/delete_tasks"
+API_REFRESH_URL = "http://127.0.0.1:8000/refresh"
 
 
 WHATSAPP_GREEN_DARK = "#075e54"
-WHATSAPP_BACKGROUND = "#e7fce3"  # <<< UPDATED TO MINT GREEN >>> 
+WHATSAPP_BACKGROUND = "#e7fce3"
 TASK_BG = "#FFFFFF"
 TASK_BORDER_RADIUS = "12px"
 
@@ -32,13 +32,13 @@ def get_processed_tasks() -> List[dict]:
     processed_tasks = []
     for task in tasks:
         processed_tasks.append({
-            "id": str(uuid.uuid4()),        # stable unique ID
+            "id": str(uuid.uuid4()),
             "content": task.get("content", ""),
             "from": task.get("from", ""),
             "group": task.get("group", ""),
             "date": task.get("date", ""),
             "time": task.get("time", ""),
-            "done": False                   # for Streamlit checkbox
+            "done": False
         })
 
     return processed_tasks
@@ -56,7 +56,22 @@ def delete_task_via_api(task: dict) -> dict:
             return {"status": "error", "message": f"API returned {response.status_code}"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
-    
+
+def refresh_new_tasks() -> dict:
+    """
+    Calls the /refresh endpoint to check for new messages from WhatsApp.
+    Returns the result including how many new tasks were found.
+    """
+    try:
+        response = requests.post(API_REFRESH_URL, timeout=120)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return {"status": "error", "message": f"API returned {response.status_code}"}
+    except requests.exceptions.Timeout:
+        return {"status": "error", "message": "The process took too long. Please try again."}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 # ==================== STREAMLIT UI ====================
 st.set_page_config(page_title="ChatList Task Processor", layout="wide")
@@ -65,7 +80,6 @@ st.set_page_config(page_title="ChatList Task Processor", layout="wide")
 st.markdown(f"""
 <style>
 
-/* <<< NEW GLOBAL MINT GREEN BACKGROUND >>> */
 body {{
     background-color: {WHATSAPP_BACKGROUND} !important;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -91,7 +105,6 @@ body {{
     margin-top: 4px;
 }}
 
-/* <<< NEW SMALLER HEADER >>> */
 .task-header-small {{
     font-size: 1.8rem;
     font-weight: 600;
@@ -148,6 +161,19 @@ body {{
     background: #e6e6e6;
 }}
 
+/* כפתור רענון שקוף עם מסגרת */
+div[data-testid="stButton"] > button {{
+    background-color: transparent !important;
+    border: 2px solid {WHATSAPP_GREEN_DARK} !important;
+    color: {WHATSAPP_GREEN_DARK} !important;
+    font-weight: 600 !important;
+}}
+
+div[data-testid="stButton"] > button:hover {{
+    background-color: rgba(7, 94, 84, 0.1) !important;
+    border: 2px solid {WHATSAPP_GREEN_DARK} !important;
+}}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -156,6 +182,27 @@ body {{
 st.markdown("<div class='title'>ChatList</div>", unsafe_allow_html=True)
 st.markdown("<div class='subtitle'>Turning Group Chat Chaos into a To-Do Checklist</div>", unsafe_allow_html=True)
 st.write("")
+
+# ====================== REFRESH BUTTON ======================
+col1, col2 = st.columns([0.85, 0.15])
+
+with col2:
+    if st.button("🔄 refrash tasks", use_container_width=True):
+        with st.spinner("Checking for new messages on WhatsApp... (This may take up to 2 minutes)"):
+            result = refresh_new_tasks()
+            
+            if result.get("status") == "success":
+                new_count = result.get("new_tasks_found", 0)
+                if new_count > 0:
+                    st.success(f"✅ Found {new_count} new tasks!")
+                else:
+                    st.info("ℹ️ No new tasks found")
+                
+                # Reload tasks from DB
+                st.session_state.tasks = get_processed_tasks()
+                st.rerun()
+            else:
+                st.error(f"❌ Error: {result.get('message', 'Unknown error')}")
 
 # ====================== SESSION STATE ======================
 if "tasks" not in st.session_state:

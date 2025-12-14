@@ -1,129 +1,3 @@
-# import json
-# import sys
-# import os
-# from datetime import datetime
-# import uvicorn
-# from fastapi import FastAPI, HTTPException
-
-# # Import existing modules
-# import controllers.processing as processing
-# import models.db as db
-
-# # ==================== Configuration ====================
-# RAW_MESSAGES_FILE = "controllers/raw_messages.json"
-# PROCESSED_MESSAGES_FILE = "processed_messages.json"
-
-# # --------------------
-# # Ensure processed JSON exists
-# # --------------------
-# def ensure_processed_file_exists():
-#     try:
-#         directory = os.path.dirname(PROCESSED_MESSAGES_FILE)
-#         if directory and not os.path.exists(directory):
-#             os.makedirs(directory, exist_ok=True)
-#         if not os.path.exists(PROCESSED_MESSAGES_FILE):
-#             with open(PROCESSED_MESSAGES_FILE, "w", encoding="utf-8") as f:
-#                 json.dump([], f, ensure_ascii=False, indent=2)
-#     except Exception as e:
-#         raise
-
-# ensure_processed_file_exists()
-
-# # ==================== FastAPI App ====================
-# app = FastAPI(
-#     title="ChatList Task Processor",
-#     description="Process WhatsApp messages and load tasks to database",
-#     version="1.0.0"
-# )
-
-# # --------------------
-# # Startup event - run all automatically
-# # --------------------
-# @app.on_event("startup")
-# def startup_event():
-#     """Run the complete pipeline when server starts"""
-#     try:
-#         # Step 1: Process messages
-#         processing.process_json_file(RAW_MESSAGES_FILE, PROCESSED_MESSAGES_FILE)
-#         # Step 2: Load to DB
-#         ensure_processed_file_exists()
-#         with open(PROCESSED_MESSAGES_FILE, "r", encoding="utf-8") as f:
-#             tasks = json.load(f)
-#         for task in tasks:
-#             db.save_task_to_db(task)
-#         print(f"Startup complete: {len(tasks)} tasks processed and loaded to DB")
-#     except Exception as e:
-#         print(f"Error during startup pipeline: {e}")
-
-# # ==================== Endpoints ====================
-# @app.get("/")
-# def root():
-#     return {
-#         "status": "running",
-#         "message": "ChatList Task Processor API",
-#         "endpoints": {
-#             "process": "/process",
-#             "load_db": "/load-db",
-#             "run_all": "/run-all",
-#             "health": "/health",
-#             "processed_tasks": "/processed_tasks"
-#         }
-#     }
-
-# @app.get("/health")
-# def health_check():
-#     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
-
-# @app.get("/processed_tasks")
-# def get_processed_tasks():
-#     return db.get_tasks_from_db()
-
-# @app.post("/process")
-# def process_messages():
-#     try:
-#         processing.process_json_file(RAW_MESSAGES_FILE, PROCESSED_MESSAGES_FILE)
-#         with open(PROCESSED_MESSAGES_FILE, "r", encoding="utf-8") as f:
-#             tasks = json.load(f)
-#         return {"status": "success", "tasks_found": len(tasks)}
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-
-# @app.post("/load-db")
-# def load_to_database():
-#     try:
-#         ensure_processed_file_exists()
-#         with open(PROCESSED_MESSAGES_FILE, "r", encoding="utf-8") as f:
-#             tasks = json.load(f)
-#         for task in tasks:
-#             db.save_task_to_db(task)
-#         return {"status": "success", "tasks_loaded": len(tasks)}
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-
-# @app.post("/run-all")
-# def run_complete_pipeline():
-#     try:
-#         processing.process_json_file(RAW_MESSAGES_FILE, PROCESSED_MESSAGES_FILE)
-#         with open(PROCESSED_MESSAGES_FILE, "r", encoding="utf-8") as f:
-#             tasks = json.load(f)
-#         for task in tasks:
-#             db.save_task_to_db(task)
-#         return {"status": "success", "tasks_processed": len(tasks)}
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-
-# # ==================== CLI Commands ====================
-# def cli_serve():
-#     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
-
-# if __name__ == "__main__":
-#     if len(sys.argv) >= 2 and sys.argv[1].lower() == "serve":
-#         cli_serve()
-#     else:
-#         print("Use 'serve' to start the server: python main.py serve")
-
-
-
 import json
 import sys
 import os
@@ -166,17 +40,17 @@ app = FastAPI(
 )
 
 # --------------------
-# Startup event - run all automatically
+# Startup event - run initial scrape
 # --------------------
 @app.on_event("startup")
 def startup_event():
-    """Run the complete pipeline when server starts"""
+    """Run the complete pipeline when server starts (initial load)"""
     try:
-        print("\n=== Starting Complete Pipeline ===")
+        print("\n=== Starting Initial Pipeline ===")
         
-        # Step 1: Scrape WhatsApp messages
+        # Step 1: Scrape WhatsApp messages (all messages - no filter)
         print("\n[1/3] Scraping WhatsApp messages...")
-        whatsapp_scraper.run_scraper()
+        whatsapp_scraper.run_scraper(min_datetime=None)
         
         # Step 2: Process messages
         print("\n[2/3] Processing messages...")
@@ -190,7 +64,7 @@ def startup_event():
         for task in tasks:
             db.save_task_to_db(task)
         
-        print(f"\n=== Pipeline Complete: {len(tasks)} tasks processed and loaded to DB ===\n")
+        print(f"\n=== Initial Pipeline Complete: {len(tasks)} tasks processed and loaded to DB ===\n")
     except Exception as e:
         print(f"\nError during startup pipeline: {e}\n")
 
@@ -201,6 +75,7 @@ def root():
         "status": "running",
         "message": "ChatList Task Processor API",
         "endpoints": {
+            "refresh": "/refresh - Update with new messages only",
             "scrape": "/scrape",
             "process": "/process",
             "load_db": "/load-db",
@@ -218,11 +93,54 @@ def health_check():
 def get_processed_tasks():
     return db.get_tasks_from_db()
 
+@app.post("/refresh")
+def refresh_new_messages():
+    """
+    Incremental update: fetch only NEW messages since last task in DB.
+    This is the main endpoint for real-time updates.
+    """
+    try:
+        # Step 1: Get timestamp of last processed task
+        last_timestamp = db.get_last_task_timestamp()
+        
+        if last_timestamp:
+            print(f"\nLast task timestamp: {last_timestamp}")
+            print("Fetching only NEW messages after this time...")
+        else:
+            print("\nNo existing tasks found - fetching all messages")
+        
+        # Step 2: Scrape with filter
+        whatsapp_scraper.run_scraper(min_datetime=last_timestamp)
+        
+        # Step 3: Process the new messages
+        processing.process_json_file(RAW_MESSAGES_FILE, PROCESSED_MESSAGES_FILE)
+        
+        # Step 4: Load new tasks to DB
+        ensure_processed_file_exists()
+        with open(PROCESSED_MESSAGES_FILE, "r", encoding="utf-8") as f:
+            new_tasks = json.load(f)
+        
+        loaded_count = 0
+        for task in new_tasks:
+            db.save_task_to_db(task)
+            loaded_count += 1
+        
+        return {
+            "status": "success",
+            "new_tasks_found": len(new_tasks),
+            "tasks_loaded": loaded_count,
+            "last_timestamp": last_timestamp.isoformat() if last_timestamp else None,
+            "message": f"Successfully updated with {loaded_count} new tasks"
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/scrape")
 def scrape_whatsapp():
     """Step 1: Scrape WhatsApp messages from ChatList group"""
     try:
-        whatsapp_scraper.run_scraper()
+        whatsapp_scraper.run_scraper(min_datetime=None)
         with open(RAW_MESSAGES_FILE, "r", encoding="utf-8") as f:
             messages = json.load(f)
         return {"status": "success", "messages_scraped": len(messages)}
@@ -268,10 +186,10 @@ def delete_task(task: dict = Body(...)):
     
 @app.post("/run-all")
 def run_complete_pipeline():
-    """Run complete pipeline: Scrape → Process → Load to DB"""
+    """Run complete pipeline: Scrape → Process → Load to DB (all messages)"""
     try:
-        # Step 1: Scrape
-        whatsapp_scraper.run_scraper()
+        # Step 1: Scrape (all messages)
+        whatsapp_scraper.run_scraper(min_datetime=None)
         
         # Step 2: Process
         processing.process_json_file(RAW_MESSAGES_FILE, PROCESSED_MESSAGES_FILE)

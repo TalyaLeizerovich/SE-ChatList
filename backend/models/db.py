@@ -201,4 +201,40 @@ def delete_task_from_db(task):
         return {"status": "success", "message": "Task deleted from DB."}
 
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        return {"status": "error", "message": str(e)} 
+    
+
+
+
+
+
+
+
+
+
+#new function
+def get_last_task_timestamp():
+    """
+    Returns datetime of the latest task in DB (date + time).
+    Used as a logical timer for incremental scraping.
+    """
+    conn = None
+    try:
+        conn = pyodbc.connect(conn_str)
+        cursor = conn.cursor()
+
+        query = """
+        SELECT MAX(CAST(date AS DATETIME) + CAST(time AS DATETIME))
+        FROM Tasks
+        """
+        cursor.execute(query)
+        result = cursor.fetchone()[0]
+
+        cursor.close()
+        conn.close()
+
+        return result  # can be None
+
+    except Exception as e:
+        print(f"Error fetching last task timestamp: {e}")
+        return None

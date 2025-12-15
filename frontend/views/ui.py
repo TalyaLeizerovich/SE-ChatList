@@ -27,7 +27,45 @@ def get_processed_tasks() -> List[dict]:
         else:
             tasks = []
     except Exception:
-        tasks = []
+            # -------- DUMMY DATA (when backend is not available) --------
+                tasks = [
+            {
+                "content": "Buy groceries",
+                "from": "Mom",
+                "group": "Family",
+                "date": "2025-01-10",
+                "time": "18:00"
+            },
+            {
+                "content": "Prepare sprint demo",
+                "from": "Team Lead",
+                "group": "Work",
+                "date": "2025-01-08",
+                "time": "09:30"
+            },
+            {
+                "content": "Book dentist appointment",
+                "from": "Clinic",
+                "group": "Personal",
+                "date": "2025-01-12",
+                "time": "11:00"
+            },
+            {
+                "content": "Pick up kids from school",
+                "from": "School",
+                "group": "Family",
+                "date": "2025-01-08",
+                "time": "14:45"
+            },
+            {
+                "content": "Submit project report",
+                "from": "Manager",
+                "group": "Work",
+                "date": "2025-01-09",
+                "time": "16:00"
+            }
+        ]
+
 
     processed_tasks = []
     for task in tasks:
@@ -42,6 +80,18 @@ def get_processed_tasks() -> List[dict]:
         })
 
     return processed_tasks
+
+def sort_tasks(tasks: List[dict], sort_option: str) -> List[dict]:
+    if sort_option == "Date":
+        return sorted(tasks, key=lambda t: t.get("date", ""))
+
+    if sort_option == "Time":
+        return sorted(tasks, key=lambda t: t.get("time", ""))
+
+    if sort_option == "Category":
+        return sorted(tasks, key=lambda t: t.get("group", ""))
+
+    return tasks
 
 def delete_task_via_api(task: dict) -> dict:
     """
@@ -221,8 +271,14 @@ if not st.session_state.tasks:
 
 else:
     st.markdown("<div class='task-header-small'>Your Tasks for Today</div>", unsafe_allow_html=True)
+    sort_option = st.selectbox(
+    "Sort tasks by:",
+    ["Date", "Time", "Category"],
+    key="sort_option"
+)
+    sorted_tasks = sort_tasks(st.session_state.tasks, sort_option)
 
-    for task in st.session_state.tasks:
+    for task in sorted_tasks:
         task_id = task["id"]
         cols = st.columns([0.05, 0.95])
         done_col, content_col = cols

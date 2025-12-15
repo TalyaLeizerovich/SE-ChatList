@@ -1,0 +1,8 @@
+[2025-12-15 08:43:23] Processing 1 messages...
+[2025-12-15 08:43:23] After filtering: 1 potentially actionable messages (0 skipped)
+[2025-12-15 08:43:23] Processing batch 1/1 (1 messages)
+[2025-12-15 08:46:31] ERROR: Batch 1 completely failed - no results returned
+[2025-12-15 08:46:31] Found 0 tasks before merging (0/1 messages processed)
+[2025-12-15 08:46:31] WARNING: 1 batches failed completely
+[2025-12-15 08:46:31] Merged into 0 unique tasks
+[2025-12-15 08:46:32] ✓ Processed 0 tasks → saved to C:\softwareEngineer\ChatList\backend\controllers\processed_messages.json

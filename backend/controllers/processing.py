@@ -123,6 +123,8 @@
 #         "processed_messages.json"
 #     )
 
+
+        
 import json
 import re
 import requests
@@ -130,135 +132,9 @@ import os
 from typing import List, Dict, Optional
 from difflib import SequenceMatcher
 
-# Ollama LLM Integration - with batching for speed
-def ollama_generate(prompt: str) -> str:
-    try:
-        response = requests.post(
-            "http://localhost:11434/api/generate",
-            json={
-                "model": "llama3",
-                "prompt": prompt,
-                "stream": False
-            },
-            timeout=10  # Add timeout to prevent hanging
-        )
-        response.raise_for_status()
-        data = response.json()
-        result = data.get("response", "")
-        
-        if not result:
-            return ""
-        
-        return result.strip()
-    except Exception as e:
-        print(f"[WARNING] Ollama error: {str(e)}")
-        return ""
 
-# Enhanced text cleaning for emojis and informal language
-def clean_text(text: str) -> str:
-    """Remove emojis and normalize informal WhatsApp language while preserving meaning."""
-    emoji_pattern = re.compile("["
-        u"\U0001F600-\U0001F64F"  # emoticons
-        u"\U0001F300-\U0001F5FF"  # symbols & pictographs
-        u"\U0001F680-\U0001F6FF"  # transport & map symbols
-        u"\U0001F1E0-\U0001F1FF"  # flags
-        u"\U00002702-\U000027B0"
-        u"\U000024C2-\U0001F251"
-        "]+", flags=re.UNICODE)
-    text = emoji_pattern.sub(r' ', text)
-    text = re.sub(r'([!?.]){2,}', r'\1', text)
-    return text.strip()
 
-# FAST: Rule-based filtering instead of LLM for every message
-def is_repetitive_or_irrelevant_fast(text: str, recent_messages: List[str]) -> bool:
-    """Fast rule-based check for irrelevant messages."""
-    text_lower = text.lower().strip()
-    
-    # Very short messages are likely noise
-    if len(text_lower.split()) < 3:
-        common_noise = ['ok', 'yes', 'no', 'thanks', 'thank you', 'got it', 'sure', 
-                       'cool', 'lol', 'haha', 'wow', 'nice', 'good', 'great']
-        if text_lower in common_noise:
-            return True
-    
-    # Check similarity with recent messages
-    for recent in recent_messages[-5:]:
-        similarity = SequenceMatcher(None, text_lower, recent.lower()).ratio()
-        if similarity > 0.85:
-            return True
-    
-    return False
 
-# FAST: Rule-based task detection for obvious cases
-def is_actionable_fast(text: str) -> Optional[bool]:
-    """Fast rule-based detection. Returns True/False if confident, None if needs LLM."""
-    text_lower = text.lower()
-    
-    # Obvious task indicators
-    task_keywords = [
-        'bring', 'send', 'upload', 'prepare', 'finish', 'review', 
-        'update', 'schedule', 'submit', 'complete', 'deliver',
-        'remember to', 'don\'t forget', 'need to', 'have to',
-        'please', 'can you', 'could you', 'would you'
-    ]
-    
-    for keyword in task_keywords:
-        if keyword in text_lower:
-            return True
-    
-    # Obvious non-tasks
-    non_task_phrases = [
-        'how are you', 'what\'s up', 'good morning', 'good night',
-        'thank', 'lol', 'haha', 'congrat', 'happy birthday'
-    ]
-    
-    for phrase in non_task_phrases:
-        if phrase in text_lower:
-            return False
-    
-    # Not sure - needs LLM
-    return None
-
-def is_actionable(text: str) -> bool:
-    """Check if message is actionable, using fast rules first."""
-    cleaned_text = clean_text(text)
-    
-    # Try fast detection first
-    fast_result = is_actionable_fast(cleaned_text)
-    if fast_result is not None:
-        return fast_result
-    
-    # Only use LLM for uncertain cases
-    prompt = f"""Classify as "task" or "not_task". Return ONE word only.
-Message: "{cleaned_text}"
-"""
-    label = ollama_generate(prompt).lower().strip()
-    return "task" in label
-
-def extract_task_from_text(text: str) -> str:
-    """Extract task using LLM."""
-    cleaned_text = clean_text(text)
-    
-    prompt = f"""Extract the task from this message. Return ONLY the task, no explanations.
-Message: {cleaned_text}
-Task:"""
-    
-    result = ollama_generate(prompt).strip()
-    return result if result else cleaned_text
-
-def heuristic_fix(task_text: str, original_text: str) -> str:
-    """Apply heuristic fixes to extracted tasks."""
-    if re.match(r"i('m| will)", task_text.lower()):
-        match = re.search(
-            r"(bring|send|upload|prepare|finish|review|update|schedule).+",
-            original_text,
-            re.IGNORECASE
-        )import json
-import re
-import requests
-import os
-from typing import List, Dict, Optional
-from difflib import SequenceMatcher
 
 # Ollama LLM Integration - BATCH processing for speed
 def ollama_generate_batch(messages: List[str]) -> List[Dict]:

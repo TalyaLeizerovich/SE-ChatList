@@ -1,0 +1,4 @@
+[2025-12-15 12:19:53] Processing 23 messages using rule-based detection...
+[2025-12-15 12:19:53] Found 13 tasks (3 messages skipped as noise)
+[2025-12-15 12:19:53] Merged into 13 unique tasks
+[2025-12-15 12:19:53] ✓ Processed 13 tasks → saved to processed_messages.json

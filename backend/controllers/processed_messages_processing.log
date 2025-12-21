@@ -1,4 +1,0 @@
-[2025-12-15 09:08:30] Processing 17 messages using rule-based detection...
-[2025-12-15 09:08:30] Found 10 tasks (2 messages skipped as noise)
-[2025-12-15 09:08:30] Merged into 10 unique tasks
-[2025-12-15 09:08:30] ✓ Processed 10 tasks → saved to C:\softwareEngineer\ChatList\backend\controllers\processed_messages.json

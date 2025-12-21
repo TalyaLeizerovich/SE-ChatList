@@ -229,3 +229,28 @@ def get_last_task_timestamp():
     except Exception as e:
         print(f"Error fetching last task timestamp: {e}")
         return None
+
+def get_task_by_id(task_id: int):
+    """Get a single task by its ID"""
+    conn = conn_str
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT id, content, date, time, "from", "group" 
+        FROM tasks 
+        WHERE id = ?
+    """, (task_id,))
+    
+    row = cursor.fetchone()
+    conn.close()
+    
+    if row:
+        return {
+            "id": row[0],
+            "content": row[1],
+            "date": row[2],
+            "time": row[3],
+            "from": row[4],
+            "group": row[5]
+        }
+    return None

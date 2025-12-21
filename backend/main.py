@@ -11,6 +11,9 @@ from fastapi import Body
 import controllers.processing as processing
 import controllers.whatsapp_scraper as whatsapp_scraper
 import models.db as db
+import controllers.calendar_controller as calendar
+from controllers.data_parser import resolve_task_date
+
 
 # ==================== Configuration ====================
 RAW_MESSAGES_FILE = "controllers/raw_messages.json"
@@ -81,7 +84,9 @@ def root():
             "load_db": "/load-db",
             "run_all": "/run-all",
             "health": "/health",
-            "processed_tasks": "/processed_tasks"
+            "processed_tasks": "/processed_tasks",
+            "add_to_calendar": "/add-to-calendar",
+            "delete_tasks": "/delete_tasks"
         }
     }
 
@@ -183,7 +188,37 @@ def delete_task(task: dict = Body(...)):
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+@app.post("/add-to-calendar")
+def add_to_calendar(task_id: int = Body(..., embed=True)):
+    """
+    Add a task to Google Calendar.
+    Expects JSON body: {"task_id": 123}
+    """
+    try:
+        # Get task from database
+        task = db.get_task_by_id(task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+
+        # Resolve the date from task content
+        event_date = resolve_task_date(task["content"])
+        
+        # Add to calendar
+        calendar.add_task_to_calendar(task["content"], event_date)
+
+        return {
+            "status": "success",
+            "task_id": task_id,
+            "task_content": task["content"],
+            "added_for": event_date.date().isoformat(),
+            "message": f"המשימה נוספה ליומן בתאריך {event_date.date().isoformat()}"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error adding to calendar: {str(e)}")
+
 @app.post("/run-all")
 def run_complete_pipeline():
     """Run complete pipeline: Scrape → Process → Load to DB (all messages)"""
@@ -217,3 +252,9 @@ if __name__ == "__main__":
         cli_serve()
     else:
         print("Use 'serve' to start the server: python main.py serve")
+
+
+
+
+
+

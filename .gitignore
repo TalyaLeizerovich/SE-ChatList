@@ -7,3 +7,5 @@ whatsapp_profile/
 # Ignore compiled Python files
 __pycache__/
 *.pyc
+# Ignore Google Calendar API token files
+backend/calendar_profile/token.json

@@ -335,4 +335,5 @@ else:
             if k.startswith("task_done_"):
                 del st.session_state[k]
 
-        st.rerun()
+        st.rerun() 
+

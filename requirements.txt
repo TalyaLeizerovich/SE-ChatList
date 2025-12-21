@@ -6,7 +6,6 @@ nltk
 hf_xet
 fastapi >= 0.115.2       
 uvicorn[standard]==0.25.0 
-requests
 pandas
 streamlit
 selenium==4.15.0
@@ -17,5 +16,6 @@ python-dateutil
 google-auth-oauthlib==1.2.0
 google-auth-httplib2==0.2.0
 google-api-python-client==2.108.0
+
 
 

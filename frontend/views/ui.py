@@ -1,71 +1,34 @@
 import uuid
 import requests
 import streamlit as st
-from typing import List
+from typing import List, Dict
+import urllib.parse
 
 # ==================== CONFIG ====================
 API_URL = "http://127.0.0.1:8000/processed_tasks"
 API_DELETE_URL = "http://127.0.0.1:8000/delete_tasks"
 API_REFRESH_URL = "http://127.0.0.1:8000/refresh"
 
-
 WHATSAPP_GREEN_DARK = "#075e54"
 WHATSAPP_BACKGROUND = "#e7fce3"
 TASK_BG = "#FFFFFF"
 TASK_BORDER_RADIUS = "12px"
+CATEGORY_BADGE_BG = "#dcf8c6" 
+
+is_view_only = st.query_params.get("view_only") == "true"
 
 # ==================== UTILS ====================
 def get_processed_tasks() -> List[dict]:
-    """
-    Fetch tasks from the backend (DB / API) and format for Streamlit display.
-    Adds a 'done' flag (default False) for checkbox handling.
-    """
     try:
         response = requests.get(API_URL, timeout=5)
         if response.status_code == 200:
             tasks = response.json()
         else:
             tasks = []
-    except Exception:
-            # -------- DUMMY DATA (when backend is not available) --------
-                tasks = [
-            {
-                "content": "Buy groceries",
-                "from": "Mom",
-                "group": "Family",
-                "date": "2025-01-10",
-                "time": "18:00"
-            },
-            {
-                "content": "Prepare sprint demo",
-                "from": "Team Lead",
-                "group": "Work",
-                "date": "2025-01-08",
-                "time": "09:30"
-            },
-            {
-                "content": "Book dentist appointment",
-                "from": "Clinic",
-                "group": "Personal",
-                "date": "2025-01-12",
-                "time": "11:00"
-            },
-            {
-                "content": "Pick up kids from school",
-                "from": "School",
-                "group": "Family",
-                "date": "2025-01-08",
-                "time": "14:45"
-            },
-            {
-                "content": "Submit project report",
-                "from": "Manager",
-                "group": "Work",
-                "date": "2025-01-09",
-                "time": "16:00"
-            }
-        ]
-
+    except Exception as e:
+        if not is_view_only:
+            st.error(f"Could not connect to Backend: {e}")
+        tasks = []
 
     processed_tasks = []
     for task in tasks:
@@ -76,264 +39,175 @@ def get_processed_tasks() -> List[dict]:
             "group": task.get("group", ""),
             "date": task.get("date", ""),
             "time": task.get("time", ""),
+            "category": task.get("category", "General"),
             "done": False
         })
-
     return processed_tasks
 
 def sort_tasks(tasks: List[dict], sort_option: str) -> List[dict]:
     if sort_option == "Date":
         return sorted(tasks, key=lambda t: t.get("date", ""))
-
     if sort_option == "Time":
         return sorted(tasks, key=lambda t: t.get("time", ""))
-
-    if sort_option == "Category":
-        return sorted(tasks, key=lambda t: t.get("group", ""))
-
     return tasks
 
 def delete_task_via_api(task: dict) -> dict:
-    """
-    Deletes the given task by calling the backend API.
-    Expects the backend to handle deletion by task details.
-    """
     try:
         response = requests.post(API_DELETE_URL, json=task, timeout=5)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            return {"status": "error", "message": f"API returned {response.status_code}"}
+        return response.json() if response.status_code == 200 else {"status": "error"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
 def refresh_new_tasks() -> dict:
-    """
-    Calls the /refresh endpoint to check for new messages from WhatsApp.
-    Returns the result including how many new tasks were found.
-    """
     try:
         response = requests.post(API_REFRESH_URL, timeout=180)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            return {"status": "error", "message": f"API returned {response.status_code}"}
-    except requests.exceptions.Timeout:
-        return {"status": "error", "message": "The process took too long. Please try again."}
+        return response.json() if response.status_code == 200 else {"status": "error"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
 # ==================== STREAMLIT UI ====================
 st.set_page_config(page_title="ChatList Task Processor", layout="wide")
 
-# ---- Custom CSS ----
 st.markdown(f"""
 <style>
-
-body {{
-    background-color: {WHATSAPP_BACKGROUND} !important;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}}
-[data-testid="stAppViewContainer"] {{
-    background-color: {WHATSAPP_BACKGROUND} !important;
-}}
-[data-testid="stMain"] {{
-    background-color: {WHATSAPP_BACKGROUND} !important;
-}}
-
-/* Titles */
-.title {{
-    color: {WHATSAPP_GREEN_DARK};
-    font-weight: 700;
-    font-size: 3rem;
-    margin-bottom: 0;
-}}
-.subtitle {{
-    color: #444;
-    font-size: 1.5rem;
-    font-weight: 500;
-    margin-top: 4px;
-}}
-
-.task-header-small {{
-    font-size: 1.8rem;
-    font-weight: 600;
-    margin-bottom: 16px;
-    color: #333;
-}}
-
-.task-header {{
-    font-size: 2rem;
-    font-weight: 600;
-    margin-bottom: 16px;
-}}
-
-.empty-message {{
-    text-align: center;
-    color: #666;
-    font-size: 1.5rem;
-    padding: 40px 0;
-}}
-
-.task-row {{
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    border-radius: {TASK_BORDER_RADIUS};
-    background-color: {TASK_BG};
-    margin-bottom: 12px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}}
-
-.task-content {{
-    font-size: 1.5rem;
-    line-height: 2rem;
-}}
-
-.task-content small {{
-    font-size: 1.2rem;
-    color: #555;
-}}
-
-.share-link {{
-    display: inline-block;
-    padding: 6px 10px;
-    border-radius: 6px;
-    text-decoration: none;
-    background: #f2f2f2;
-    color: #222;
-    margin-right: 8px;
-    font-size: 1.2rem;
-}}
-
-.share-link:hover {{
-    background: #e6e6e6;
-}}
-
-div[data-testid="stButton"] > button {{
-    background-color: transparent !important;
-    border: 2px solid {WHATSAPP_GREEN_DARK} !important;
-    color: {WHATSAPP_GREEN_DARK} !important;
-    font-weight: 600 !important;
-}}
-
-div[data-testid="stButton"] > button:hover {{
-    background-color: rgba(7, 94, 84, 0.1) !important;
-    border: 2px solid {WHATSAPP_GREEN_DARK} !important;
-}}
-
+    body, [data-testid="stAppViewContainer"], [data-testid="stMain"] {{
+        background-color: {WHATSAPP_BACKGROUND} !important;
+    }}
+    .title {{ color: {WHATSAPP_GREEN_DARK}; font-weight: 700; font-size: 2.5rem; margin-bottom: 0; }}
+    .subtitle {{ color: #444; font-size: 1.1rem; font-weight: 500; margin-top: 2px; }}
+    
+    .category-header {{
+        background-color: {WHATSAPP_GREEN_DARK};
+        color: white;
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin: 15px 0 8px 0;
+        display: inline-block;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }}
+    
+    .task-row {{
+        display: flex;
+        flex-direction: column;
+        padding: 12px 16px;
+        border-radius: {TASK_BORDER_RADIUS};
+        background-color: {TASK_BG};
+        margin-bottom: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }}
+    .category-badge {{
+        background-color: {CATEGORY_BADGE_BG};
+        color: #075e54;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: bold;
+        text-transform: uppercase;
+    }}
+    .share-link {{
+        display: inline-block;
+        padding: 6px 10px;
+        border-radius: 6px;
+        text-decoration: none;
+        background: #f2f2f2;
+        color: #222;
+        margin-right: 8px;
+        font-size: 0.9rem;
+    }}
+    
+    div[data-testid="stButton"] > button {{
+        border: 1.5px solid {WHATSAPP_GREEN_DARK} !important;
+        color: {WHATSAPP_GREEN_DARK} !important;
+        padding: 2px 10px !important;
+        font-size: 0.8rem !important;
+        height: auto !important;
+        width: auto !important;
+    }}
 </style>
 """, unsafe_allow_html=True)
 
+header_col, refresh_col = st.columns([0.85, 0.15])
 
-# ---- Branding ----
-st.markdown("<div class='title'>ChatList</div>", unsafe_allow_html=True)
-st.markdown("<div class='subtitle'>Turning Group Chat Chaos into a To-Do Checklist</div>", unsafe_allow_html=True)
-st.write("")
+with header_col:
+    st.markdown("<div class='title'>ChatList</div>", unsafe_allow_html=True)
+    if is_view_only:
+        st.markdown("<div class='subtitle'>📖 View-Only Mode</div>", unsafe_allow_html=True)
+    else:
+        st.markdown("<div class='subtitle'>Turning Group Chat Chaos into a To-Do Checklist</div>", unsafe_allow_html=True)
 
-# ====================== REFRESH BUTTON ======================
-col1, col2 = st.columns([0.85, 0.15])
+if not is_view_only:
+    with refresh_col:
+        st.write("<div style='padding-top: 15px;'></div>", unsafe_allow_html=True)
+        if st.button("🔄 Refresh"):
+            with st.spinner("Syncing..."):
+                result = refresh_new_tasks()
+                if result.get("status") == "success":
+                    st.session_state.tasks = get_processed_tasks()
+                    st.rerun()
 
-with col2:
-    if st.button("🔄 refrash tasks", use_container_width=True):
-        with st.spinner("Checking for new messages on WhatsApp... (This may take a few moments.)"):
-            result = refresh_new_tasks()
-            
-            if result.get("status") == "success":
-                new_count = result.get("new_tasks_found", 0)
-                if new_count > 0:
-                    st.success(f"Found {new_count} new tasks!")
-                else:
-                    st.info("No new tasks found")
-                
-                # Reload tasks from DB
-                st.session_state.tasks = get_processed_tasks()
-                st.rerun()
-            else:
-                st.error(f"Error: {result.get('message', 'Unknown error')}")
-
-# ====================== SESSION STATE ======================
+# ---- SESSION STATE ----
 if "tasks" not in st.session_state:
-    tasks = get_processed_tasks()
-    for t in tasks:
-        if "id" not in t:
-            t["id"] = str(uuid.uuid4())
-    st.session_state.tasks = tasks
-else:
-    for t in st.session_state.tasks:
-        if "id" not in t:
-            t["id"] = str(uuid.uuid4())
+    st.session_state.tasks = get_processed_tasks()
 
 # ====================== MAIN SCREEN ======================
 if not st.session_state.tasks:
-    st.markdown("<div class='empty-message'>🎉 No tasks to show — you're all caught up!</div>", unsafe_allow_html=True)
-
+    st.markdown("<div style='text-align: center; padding: 50px;'><h3>🎉 All caught up!</h3></div>", unsafe_allow_html=True)
 else:
-    st.markdown("<div class='task-header-small'>Your Tasks for Today</div>", unsafe_allow_html=True)
-    sort_option = st.selectbox(
-    "Sort tasks by:",
-    ["Date", "Time", "Category"],
-    key="sort_option"
-)
-    sorted_tasks = sort_tasks(st.session_state.tasks, sort_option)
+    all_categories = sorted(list(set(t["category"] for t in st.session_state.tasks if t.get("category"))))
+    
+    col_sort, _ = st.columns([0.2, 0.8])
+    with col_sort:
+        sort_option = st.selectbox("Sort by:", ["Date", "Time"])
 
-    for task in sorted_tasks:
-        task_id = task["id"]
-        cols = st.columns([0.05, 0.95])
-        done_col, content_col = cols
+    for cat in all_categories:
+        st.markdown(f"<div class='category-header'>{cat}</div>", unsafe_allow_html=True)
+        
+        cat_tasks = [t for t in st.session_state.tasks if t["category"] == cat]
+        cat_tasks = sort_tasks(cat_tasks, sort_option)
 
-        # Checkbox
-        with done_col:
-            checkbox_key = f"task_done_{task_id}"
-            checked = st.checkbox("", key=checkbox_key)
+        for task in cat_tasks:
+            task_id = task["id"]
+            
+            if is_view_only:
+                content_col = st.container()
+            else:
+                cols = st.columns([0.04, 0.96])
+                with cols[0]:
+                    if st.checkbox("", key=f"task_done_{task_id}"):
+                        delete_task_via_api(task)
+                        st.session_state.tasks = [t for t in st.session_state.tasks if t["id"] != task_id]
+                        st.rerun()
+                content_col = cols[1]
 
-        # Task content in expander
-        with content_col:
-            with st.expander(task.get("content", "Task")):
-                st.markdown(f"""
-                <div class='task-row'>
-                    <div class='task-content'>
-                        <strong>{task.get('content','Untitled Task')}</strong><br>
-                        <small>Sender: {task.get('from','N/A')} | Group: {task.get('group','N/A')}</small><br>
-                        <small>Date: {task.get('date','N/A')} {task.get('time','N/A')}</small><br>
+            with content_col:
+                with st.expander(task['content']):
+                    st.markdown(f"""
+                    <div class='task-row'>
+                        <div><span class='category-badge'>{task['category']}</span></div>
+                        <div style='font-size: 1.1rem; margin-top: 8px;'><strong>{task['content']}</strong></div>
+                        <div style='color: #666; font-size: 0.9rem;'>
+                            👤 From: {task['from']} | 👥 Group: {task['group']}<br>
+                            📅 Date: {task['date']} | ⏰ Time: {task['time']}
+                        </div>
                     </div>
-                </div>
-                """, unsafe_allow_html=True)
-
-                st.write("### Share this task:")
-                share_text = f"{task.get('content','Task')}"
-                whatsapp_url = f"https://wa.me/?text={share_text.replace(' ', '%20')}"
-                google_calendar_url = "https://calendar.google.com"
-                family_url = "https://family-app.example.com/share"
-
-                st.markdown(
-                    f"""
-                    <a class='share-link' href='{whatsapp_url}' target='_blank'>WhatsApp</a>
-                    <a class='share-link' href='{google_calendar_url}' target='_blank'>Google Calendar</a>
-                    <a class='share-link' href='{family_url}' target='_blank'>Share with Family</a>
-                    """,
-                    unsafe_allow_html=True
-                )
-
-    # Remove checked tasks
-    remaining_tasks = []
-    removed_any = False
-    for task in st.session_state.tasks:
-        key = f"task_done_{task['id']}"
-        if st.session_state.get(key, False):
-            removed_any = True
-            # Delete from DB
-            delete_task_via_api(task)
-        else:
-            remaining_tasks.append(task)
-
-    if removed_any:
-        st.session_state.tasks = remaining_tasks
-
-        for k in list(st.session_state.keys()):
-            if k.startswith("task_done_"):
-                del st.session_state[k]
-
-        st.rerun() 
-
+                    """, unsafe_allow_html=True)
+                    
+                    if not is_view_only:
+                        view_only_link = "http://localhost:8501/?view_only=true"
+                        
+                        share_text = (
+                            "Hey! Just wanted to share this task with you:\n\n"
+                            f"Task: {task['content']}\n"
+                            f"Category: {task['category']}\n\n"
+                            f"Want to watch my full task list? Click here: {view_only_link}"
+                        )
+                        
+                        encoded_share_text = urllib.parse.quote(share_text)
+                        
+                        st.markdown(f"""
+                            <a class='share-link' href='https://wa.me/?text={encoded_share_text}' target='_blank'>WhatsApp</a>
+                            <a class='share-link' href='https://calendar.google.com' target='_blank'>Google Calendar</a>
+                        """, unsafe_allow_html=True)

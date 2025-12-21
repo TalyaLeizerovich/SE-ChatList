@@ -52,7 +52,6 @@ def save_task_to_db(task):
     time_str = task.get("time", "")
     sender_name = task.get("from", "")
     group_name = task.get("group", "")
-    # הוספת שליפת הקטגוריה מהמילון
     category = task.get("category", "General") 
 
     if is_empty_or_invalid_content(content):
@@ -77,8 +76,6 @@ def save_task_to_db(task):
             cursor.close()
             conn.close()
             return {"status": "skipped", "message": "Task already exists in DB."}
-
-        # עדכון השאילתה להכלת עמודת category
         insert_query = """
         INSERT INTO Tasks (content, date, time, sender_name, group_name, category)
         VALUES (?, ?, ?, ?, ?, ?)
@@ -97,7 +94,7 @@ def save_task_to_db(task):
 def get_tasks_from_db() -> list[Dict]:
     """
     Retrieves all tasks from the SOMEE SQL Server DB and formats them 
-    as a list of dictionaries for the Gradio frontend.
+    as a list of dictionaries for the Streamlit frontend.
     """
     conn = None
     tasks = []
@@ -106,9 +103,8 @@ def get_tasks_from_db() -> list[Dict]:
         conn = pyodbc.connect(conn_str)
         cursor = conn.cursor()
         
-        # הוספת category לשאילתת ה-SELECT
         select_query = """
-        SELECT content, date, time, sender_name, group_name, category
+        SELECT task_id, content, date, time, sender_name, group_name, category
         FROM Tasks
         ORDER BY date DESC, time DESC
         """
@@ -116,16 +112,17 @@ def get_tasks_from_db() -> list[Dict]:
         rows = cursor.fetchall()
 
         for row in rows:
-            date_str = row[1].strftime("%Y-%m-%d") if row[1] else "N/A"
-            time_str = row[2].strftime("%H:%M:%S") if row[2] else "N/A"
+            date_str = row[2].strftime("%Y-%m-%d") if row[2] else "N/A"
+            time_str = row[3].strftime("%H:%M:%S") if row[3] else "N/A"
             
             tasks.append({
-                "content": row[0],
+                "id": row[0],  
+                "content": row[1],
                 "date": date_str,
                 "time": time_str,
-                "from": row[3],
-                "group": row[4],
-                "category": row[5] if row[5] else "General"  # טיפול בערכי NULL ישנים
+                "from": row[4],
+                "group": row[5],
+                "category": row[6] if row[6] else "General"
             })
 
         cursor.close()
@@ -211,26 +208,45 @@ def get_last_task_timestamp():
         return None
 
 def get_task_by_id(task_id: int):
-    """Get a single task by its ID"""
-    conn = conn_str
-    cursor = conn.cursor()
-    
-    cursor.execute("""
-        SELECT id, content, date, time, "from", "group" 
-        FROM tasks 
-        WHERE id = ?
-    """, (task_id,))
-    
-    row = cursor.fetchone()
-    conn.close()
-    
-    if row:
-        return {
-            "id": row[0],
-            "content": row[1],
-            "date": row[2],
-            "time": row[3],
-            "from": row[4],
-            "group": row[5]
-        }
-    return None
+    """Get a single task by its ID from the database"""
+    conn = None
+    try:
+        conn = pyodbc.connect(conn_str)
+        cursor = conn.cursor()
+        
+        # Use correct column names from your database
+        query = """
+        SELECT content, date, time, sender_name, group_name, category
+        FROM Tasks
+        WHERE task_id = ?
+        """
+        cursor.execute(query, (task_id,))
+        row = cursor.fetchone()
+        
+        if row:
+            date_str = row[1].strftime("%Y-%m-%d") if row[1] else "N/A"
+            time_str = row[2].strftime("%H:%M:%S") if row[2] else "N/A"
+            
+            return {
+                "id": task_id,
+                "content": row[0],
+                "date": date_str,
+                "time": time_str,
+                "from": row[3],
+                "group": row[4],
+                "category": row[5] if row[5] else "General"
+            }
+        
+        cursor.close()
+        conn.close()
+        return None
+        
+    except Exception as e:
+        print(f"Error fetching task by ID: {e}")
+        return None
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except:
+                pass

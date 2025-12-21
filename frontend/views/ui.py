@@ -1,4 +1,3 @@
-import uuid
 import requests
 import streamlit as st
 from typing import List, Dict
@@ -8,6 +7,7 @@ import urllib.parse
 API_URL = "http://127.0.0.1:8000/processed_tasks"
 API_DELETE_URL = "http://127.0.0.1:8000/delete_tasks"
 API_REFRESH_URL = "http://127.0.0.1:8000/refresh"
+API_ADD_CALENDAR_URL = "http://127.0.0.1:8000/add-to-calendar"
 
 WHATSAPP_GREEN_DARK = "#075e54"
 WHATSAPP_BACKGROUND = "#e7fce3"
@@ -33,7 +33,7 @@ def get_processed_tasks() -> List[dict]:
     processed_tasks = []
     for task in tasks:
         processed_tasks.append({
-            "id": str(uuid.uuid4()),
+            "id": task.get("id"),  
             "content": task.get("content", ""),
             "from": task.get("from", ""),
             "group": task.get("group", ""),
@@ -61,6 +61,18 @@ def delete_task_via_api(task: dict) -> dict:
 def refresh_new_tasks() -> dict:
     try:
         response = requests.post(API_REFRESH_URL, timeout=180)
+        return response.json() if response.status_code == 200 else {"status": "error"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+def add_task_to_calendar(task_id: int) -> dict:
+    """Calls the /add-to-calendar endpoint to add a task to Google Calendar."""
+    try:
+        response = requests.post(
+            API_ADD_CALENDAR_URL,
+            json={"task_id": task_id},
+            timeout=30
+        )
         return response.json() if response.status_code == 200 else {"status": "error"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
@@ -196,6 +208,19 @@ else:
                     """, unsafe_allow_html=True)
                     
                     if not is_view_only:
+                        # ========== ADD TO CALENDAR BUTTON ==========
+                        calendar_button_key = f"add_calendar_{task_id}"
+                        if st.button("📅 Add to Calendar", key=calendar_button_key):
+                            with st.spinner("Adding to Google Calendar..."):
+                                result = add_task_to_calendar(task_id)
+                                
+                                if result.get("status") == "success":
+                                    st.success(f"✅ Added to calendar on {result.get('added_for', 'N/A')}!")
+                                else:
+                                    st.error(f"❌ Failed: {result.get('message', 'Unknown error')}")
+                        
+                        st.write("")
+                        st.write("### Share this task:")
                         view_only_link = "http://localhost:8501/?view_only=true"
                         
                         share_text = (
@@ -209,5 +234,4 @@ else:
                         
                         st.markdown(f"""
                             <a class='share-link' href='https://wa.me/?text={encoded_share_text}' target='_blank'>WhatsApp</a>
-                            <a class='share-link' href='https://calendar.google.com' target='_blank'>Google Calendar</a>
                         """, unsafe_allow_html=True)

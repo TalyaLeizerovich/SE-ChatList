@@ -3,7 +3,8 @@ venv/
 # Ignore WhatsApp profile data
 whatsapp_profile/
 # Ignore JSON files
-*.json
+processed_messages.json
+raw_messages.json
 # Ignore compiled Python files
 __pycache__/
 *.pyc

@@ -78,7 +78,11 @@ def add_task_to_calendar(task_id: int) -> dict:
         return {"status": "error", "message": str(e)}
 
 # ==================== STREAMLIT UI ====================
-st.set_page_config(page_title="ChatList Task Processor", layout="wide")
+st.set_page_config(
+    page_title="ChatList",
+    page_icon="C:/softwareEngineer/ChatList/frontend/pictures/logo.png",  
+    layout="wide"
+)
 
 st.markdown(f"""
 <style>

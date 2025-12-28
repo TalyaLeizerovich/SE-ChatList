@@ -1,9 +1,10 @@
+
 from altair import Dict
 import pyodbc
 from datetime import datetime
 import re
+from models.encryption_utils import encrypt_text, decrypt_text
 
-# --- Connect to SOMEE DB ---
 conn_str = (
     "DRIVER={ODBC Driver 18 for SQL Server};"
     "SERVER=ChatListDB.mssql.somee.com;"
@@ -36,13 +37,12 @@ def is_empty_or_invalid_content(content):
     
     return False
 
-def task_exists(cursor, content, date_obj, time_obj, sender_name, group_name):
-    """Checks if a task with the same details already exists"""
+def task_exists(cursor, date_obj, time_obj, sender_name, group_name):
     query = """
     SELECT COUNT(*) FROM Tasks
-    WHERE content = ? AND date = ? AND time = ? AND sender_name = ? AND group_name = ?
+    WHERE date = ? AND time = ? AND sender_name = ? AND group_name = ?
     """
-    cursor.execute(query, content, date_obj, time_obj, sender_name, group_name)
+    cursor.execute(query, date_obj, time_obj, sender_name, group_name)
     count = cursor.fetchone()[0]
     return count > 0
 
@@ -67,20 +67,22 @@ def save_task_to_db(task):
     except:
         time_obj = None
 
+    encrypted_content = encrypt_text(content)
+
     try:
         conn = pyodbc.connect(conn_str)
         cursor = conn.cursor()
 
-        # Check if task already exists
-        if task_exists(cursor, content, date_obj, time_obj, sender_name, group_name):
+        if task_exists(cursor, date_obj, time_obj, sender_name, group_name):
             cursor.close()
             conn.close()
             return {"status": "skipped", "message": "Task already exists in DB."}
+        
         insert_query = """
         INSERT INTO Tasks (content, date, time, sender_name, group_name, category)
         VALUES (?, ?, ?, ?, ?, ?)
         """
-        cursor.execute(insert_query, content, date_obj, time_obj, sender_name, group_name, category)
+        cursor.execute(insert_query, encrypted_content, date_obj, time_obj, sender_name, group_name, category)
         conn.commit()
 
         cursor.close()
@@ -92,10 +94,6 @@ def save_task_to_db(task):
         return {"status": "error", "message": str(e)}
 
 def get_tasks_from_db() -> list[Dict]:
-    """
-    Retrieves all tasks from the SOMEE SQL Server DB and formats them 
-    as a list of dictionaries for the Streamlit frontend.
-    """
     conn = None
     tasks = []
     
@@ -115,9 +113,12 @@ def get_tasks_from_db() -> list[Dict]:
             date_str = row[2].strftime("%Y-%m-%d") if row[2] else "N/A"
             time_str = row[3].strftime("%H:%M:%S") if row[3] else "N/A"
             
+            encrypted_content = row[1]
+            decrypted_content = decrypt_text(encrypted_content) if encrypted_content else ""
+            
             tasks.append({
                 "id": row[0],  
-                "content": row[1],
+                "content": decrypted_content,
                 "date": date_str,
                 "time": time_str,
                 "from": row[4],
@@ -143,36 +144,20 @@ def get_tasks_from_db() -> list[Dict]:
                 pass
 
 def delete_task_from_db(task):
-    """
-    Deletes a task from the Tasks table based on all identifying fields.
-    """
-    content = task.get("content", "")
-    date_str = task.get("date", "")
-    time_str = task.get("time", "")
-    sender_name = task.get("from", "")
-    group_name = task.get("group", "")
-    category = task.get("category", "")
-
-    try:
-        date_obj = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else None
-    except:
-        date_obj = None
-
-    try:
-        time_obj = datetime.strptime(time_str, "%H:%M:%S").time() if time_str else None
-    except:
-        time_obj = None
+    task_id = task.get("id", None)
+    
+    if task_id is None:
+        return {"status": "error", "message": "Task ID is required for deletion"}
 
     try:
         conn = pyodbc.connect(conn_str)
         cursor = conn.cursor()
 
-        # הוספנו את category ל-WHERE כדי לוודא מחיקה מדויקת
         delete_query = """
         DELETE FROM Tasks
-        WHERE content = ? AND date = ? AND time = ? AND sender_name = ? AND group_name = ? AND (category = ? OR category IS NULL)
+        WHERE task_id = ?
         """
-        cursor.execute(delete_query, content, date_obj, time_obj, sender_name, group_name, category)
+        cursor.execute(delete_query, task_id)
         conn.commit()
 
         cursor.close()
@@ -180,12 +165,9 @@ def delete_task_from_db(task):
         return {"status": "success", "message": "Task deleted from DB."}
 
     except Exception as e:
-        return {"status": "error", "message": str(e)} 
+        return {"status": "error", "message": str(e)}
 
 def get_last_task_timestamp():
-    """
-    Returns datetime of the latest task in DB (date + time).
-    """
     conn = None
     try:
         conn = pyodbc.connect(conn_str)
@@ -208,13 +190,11 @@ def get_last_task_timestamp():
         return None
 
 def get_task_by_id(task_id: int):
-    """Get a single task by its ID from the database"""
     conn = None
     try:
         conn = pyodbc.connect(conn_str)
         cursor = conn.cursor()
         
-        # Use correct column names from your database
         query = """
         SELECT content, date, time, sender_name, group_name, category
         FROM Tasks
@@ -227,9 +207,12 @@ def get_task_by_id(task_id: int):
             date_str = row[1].strftime("%Y-%m-%d") if row[1] else "N/A"
             time_str = row[2].strftime("%H:%M:%S") if row[2] else "N/A"
             
+            encrypted_content = row[0]
+            decrypted_content = decrypt_text(encrypted_content) if encrypted_content else ""
+            
             return {
                 "id": task_id,
-                "content": row[0],
+                "content": decrypted_content,
                 "date": date_str,
                 "time": time_str,
                 "from": row[3],
@@ -244,6 +227,29 @@ def get_task_by_id(task_id: int):
     except Exception as e:
         print(f"Error fetching task by ID: {e}")
         return None
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except:
+                pass
+
+def truncate_tasks_table():
+    conn = None
+    try:
+        conn = pyodbc.connect(conn_str)
+        cursor = conn.cursor()
+
+        cursor.execute("TRUNCATE TABLE Tasks")
+        conn.commit()
+
+        cursor.close()
+        conn.close()
+        print("Tasks table truncated successfully")
+
+    except Exception as e:
+        print(f"Error truncating Tasks table: {e}")
+
     finally:
         if conn:
             try:

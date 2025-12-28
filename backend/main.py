@@ -20,6 +20,24 @@ RAW_MESSAGES_FILE = "controllers/raw_messages.json"
 PROCESSED_MESSAGES_FILE = "processed_messages.json"
 
 # --------------------
+# Ensure previous JSON files are cleaned up
+# --------------------
+def cleanup_generated_files():
+    files_to_delete = [
+        RAW_MESSAGES_FILE,
+        PROCESSED_MESSAGES_FILE
+    ]
+
+    for file_path in files_to_delete:
+        try:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                print(f"Deleted file: {file_path}")
+        except Exception as e:
+            print(f"Failed to delete {file_path}: {e}")
+
+
+# --------------------
 # Ensure processed JSON exists
 # --------------------
 def ensure_processed_file_exists():
@@ -50,6 +68,13 @@ def startup_event():
     """Run the complete pipeline when server starts (initial load)"""
     try:
         print("\n=== Starting Initial Pipeline ===")
+         # Step 0: Clear DB on startup
+        print("\n[0/3] Clearing Tasks table...")
+        db.truncate_tasks_table()
+
+        # Step 0.5: Cleanup generated files
+        print("\n[0.5/4] Cleaning generated JSON files...")
+        cleanup_generated_files()
         
         # Step 1: Scrape WhatsApp messages (all messages - no filter)
         print("\n[1/3] Scraping WhatsApp messages...")

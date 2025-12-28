@@ -10,7 +10,7 @@ import time
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
 MODEL_NAME = "mistral:7b-instruct"
-MAX_WORKERS = 4
+MAX_WORKERS = 1
 
 # ==================== PROMPTS ====================
 
@@ -44,7 +44,7 @@ def ollama_generate(prompt: str) -> str:
             "prompt": prompt,
             "stream": False
         },
-        timeout=30
+        timeout=120
     )
     response.raise_for_status()
     return response.json().get("response", "").strip()

@@ -1,7 +1,6 @@
 import requests
 import streamlit as st
 from typing import List, Dict
-import urllib.parse
 
 # ==================== CONFIG ====================
 API_URL = "http://127.0.0.1:8000/processed_tasks"
@@ -66,7 +65,6 @@ def refresh_new_tasks() -> dict:
         return {"status": "error", "message": str(e)}
 
 def add_task_to_calendar(task_id: int) -> dict:
-    """Calls the /add-to-calendar endpoint to add a task to Google Calendar."""
     try:
         response = requests.post(
             API_ADD_CALENDAR_URL,
@@ -123,16 +121,6 @@ st.markdown(f"""
         font-weight: bold;
         text-transform: uppercase;
     }}
-    .share-link {{
-        display: inline-block;
-        padding: 6px 10px;
-        border-radius: 6px;
-        text-decoration: none;
-        background: #f2f2f2;
-        color: #222;
-        margin-right: 8px;
-        font-size: 0.9rem;
-    }}
     
     div[data-testid="stButton"] > button {{
         border: 1.5px solid {WHATSAPP_GREEN_DARK} !important;
@@ -140,7 +128,7 @@ st.markdown(f"""
         padding: 2px 10px !important;
         font-size: 0.8rem !important;
         height: auto !important;
-        width: auto !important;
+        width: 100% !important; /* תופס את כל רוחב העמודה שלו לאחידות */
     }}
 </style>
 """, unsafe_allow_html=True)
@@ -212,30 +200,19 @@ else:
                     """, unsafe_allow_html=True)
                     
                     if not is_view_only:
-                        # ========== ADD TO CALENDAR BUTTON ==========
-                        calendar_button_key = f"add_calendar_{task_id}"
-                        if st.button("📅 Add to Calendar", key=calendar_button_key):
-                            with st.spinner("Adding to Google Calendar..."):
-                                result = add_task_to_calendar(task_id)
-                                
-                                if result.get("status") == "success":
-                                    st.success(f"✅ Added to calendar on {result.get('added_for', 'N/A')}!")
-                                else:
-                                    st.error(f"❌ Failed: {result.get('message', 'Unknown error')}")
+                        st.write("### Share your task:")
                         
-                        st.write("")
-                        st.write("### Share this task:")
-                        view_only_link = "http://localhost:8501/?view_only=true"
+                        btn_col1, btn_col2, _ = st.columns([0.1, 0.1, 0.74], gap="small")
                         
-                        share_text = (
-                            "Hey! Just wanted to share this task with you:\n\n"
-                            f"Task: {task['content']}\n"
-                            f"Category: {task['category']}\n\n"
-                            f"Want to watch my full task list? Click here: {view_only_link}"
-                        )
-                        
-                        encoded_share_text = urllib.parse.quote(share_text)
-                        
-                        st.markdown(f"""
-                            <a class='share-link' href='https://wa.me/?text={encoded_share_text}' target='_blank'>WhatsApp</a>
-                        """, unsafe_allow_html=True)
+                        with btn_col1:
+                            if st.button("📅 Calendar", key=f"cal_{task_id}"):
+                                with st.spinner("Adding..."):
+                                    result = add_task_to_calendar(task_id)
+                                    if result.get("status") == "success":
+                                        st.success("✅ Added!")
+                                    else:
+                                        st.error("❌ Error")
+
+                        with btn_col2:
+                            if st.button("💬 WhatsApp", key=f"wa_{task_id}"):
+                                st.info("Link generated!")

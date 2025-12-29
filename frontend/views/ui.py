@@ -80,11 +80,6 @@ def generate_whatsapp_link(task: dict) -> str:
     """Generate WhatsApp Web sharing link"""
     message = f"📋 *Task from ChatList*\n\n"
     message += f"*{task['content']}*\n\n"
-    message += f"📂 Category: {task['category']}\n"
-    message += f"👤 From: {task['from']}\n"
-    message += f"👥 Group: {task['group']}\n"
-    message += f"📅 Date: {task['date']}\n"
-    message += f"⏰ Time: {task['time']}"
    
     encoded_message = urllib.parse.quote(message)
     return f"https://web.whatsapp.com/send?text={encoded_message}"

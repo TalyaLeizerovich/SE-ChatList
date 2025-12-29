@@ -37,12 +37,12 @@ def is_empty_or_invalid_content(content):
     
     return False
 
-def task_exists(cursor, date_obj, time_obj, sender_name, group_name):
+def task_exists(cursor, encrypted_content):
     query = """
     SELECT COUNT(*) FROM Tasks
-    WHERE date = ? AND time = ? AND sender_name = ? AND group_name = ?
+    WHERE content = ?
     """
-    cursor.execute(query, date_obj, time_obj, sender_name, group_name)
+    cursor.execute(query, (encrypted_content,))
     count = cursor.fetchone()[0]
     return count > 0
 
@@ -73,7 +73,7 @@ def save_task_to_db(task):
         conn = pyodbc.connect(conn_str)
         cursor = conn.cursor()
 
-        if task_exists(cursor, date_obj, time_obj, sender_name, group_name):
+        if task_exists(cursor, encrypted_content):
             cursor.close()
             conn.close()
             return {"status": "skipped", "message": "Task already exists in DB."}

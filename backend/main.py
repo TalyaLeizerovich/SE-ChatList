@@ -1,7 +1,7 @@
 import json
 import sys
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi import Body
@@ -131,7 +131,7 @@ def refresh_new_messages():
     """
     try:
         # Step 1: Get timestamp of last processed task
-        last_timestamp = db.get_last_task_timestamp()
+        last_timestamp = db.get_last_task_timestamp() + timedelta(seconds=60)
         
         if last_timestamp:
             print(f"\nLast task timestamp: {last_timestamp}")

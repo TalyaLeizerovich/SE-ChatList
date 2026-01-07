@@ -14,10 +14,14 @@ google-auth-oauthlib==1.2.0
 google-auth-httplib2==0.2.0
 google-api-python-client==2.108.0
 cryptography
+<<<<<<< HEAD
 pytest>=8.0.0
 selenium>=4.14.0
 requests>=2.31.0
 
 
 
+=======
+pytest
+>>>>>>> 3c55be7cb3f3382f62bfa94d1d32c6b64ebc9cc4
 

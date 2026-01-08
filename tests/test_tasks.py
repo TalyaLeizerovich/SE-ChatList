@@ -78,3 +78,52 @@ class TestTaskWorkflow:
         except Exception as e:
             self.page.take_screenshot("failed_refresh")
             raise e
+
+    def test_05_full_e2e_whatsapp_to_calendar_sync(self, driver):
+        try:
+            # Step 1: Navigate to the app
+            self.page.navigate()
+           
+            # Step 2: Wait for the task to appear (No manual refresh)
+            print("Waiting for task to appear on screen...")
+            from selenium.webdriver.support.ui import WebDriverWait
+            from selenium.webdriver.support import expected_conditions as EC
+            from selenium.webdriver.common.by import By
+
+            # Wait up to 30 seconds for the expander to be present
+            WebDriverWait(driver, 30).until(
+                EC.presence_of_element_located(self.page.DETAILS_EXPANDER)
+            )
+           
+            # Step 3: Open the first task
+            expanders = driver.find_elements(*self.page.DETAILS_EXPANDER)
+            expanders[0].click()
+            time.sleep(2) # Wait for animation
+           
+            # Step 4: Find and click the Calendar button
+            print("Locating Calendar button...")
+            calendar_btn = expanders[0].find_element(By.XPATH, ".//button[contains(., 'Calendar')]")
+           
+            # Scroll to the button to make sure it's viewable
+            driver.execute_script("arguments[0].scrollIntoView(true);", calendar_btn)
+            time.sleep(1)
+           
+            # Execute the click via JavaScript (most reliable way)
+            print("Clicking Calendar button now...")
+            driver.execute_script("arguments[0].click();", calendar_btn)
+           
+            # Step 5: CRITICAL - Wait for backend to finish the sync
+            # If we close the browser too fast, the request to Google might be cancelled
+            print("Sync triggered. Waiting 10 seconds for Google API to complete...")
+            time.sleep(10)
+           
+            # Step 6: Final check of the UI content
+            details_content = expanders[0].text
+            assert "Calendar" in details_content, "Calendar metadata missing from task"
+           
+            print("Test passed! Check your Google Calendar now.")
+
+        except Exception as e:
+            self.page.take_screenshot("failed_calendar_sync")
+            print(f"Test failed: {e}")
+            raise e

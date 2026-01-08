@@ -18,6 +18,8 @@ class TaskPage:
     REFRESH_BTN = (By.XPATH, "//button[contains(., 'Refresh')]")
     SPINNER = (By.CSS_SELECTOR, "div[data-testid='stLoading']")
     DETAILS_EXPANDER = (By.CSS_SELECTOR, "div[data-testid='stExpander']")
+    CALENDAR_ICON = (By.CSS_SELECTOR, "svg[data-testid='stIconCalendar']")
+    TASK_DETAILS_TEXT = (By.CSS_SELECTOR, "div[data-testid='stExpander'] p")
     
     def navigate(self):
         self.driver.get(self.url)

@@ -13,4 +13,4 @@ ChatList is an AI-powered assistant that filters, summarizes, and extracts actio
 2. In the second CMD run: C:\softwareEngineer\ChatList\frontend streamlit run views/ui.py
 Note: During the launch, you will probably see a WhatsApp QR code. Scan it using your WhatsApp account via linked devices.
 In addition, in case you want to connect your calendar, you will need to choose a google account to connect with.
-
+3. For tests: in additional CMD while server application and ui is running, run: pytest test_tasks.py -v -s

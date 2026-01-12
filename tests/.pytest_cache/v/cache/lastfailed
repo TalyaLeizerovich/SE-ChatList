@@ -1,0 +1,6 @@
+{
+  "test_tasks.py::TestTaskWorkflow::test_task_generation_and_display": true,
+  "test_tasks.py::TestTaskWorkflow::test_task_completion_via_ui": true,
+  "test_tasks.py::TestTaskWorkflow::test_no_task_messages_empty_state": true,
+  "test_tasks.py::TestTaskWorkflow::test_incremental_update_with_refresh": true
+}

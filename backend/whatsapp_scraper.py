@@ -12,7 +12,7 @@ from datetime import datetime
 # ============================
 # CONFIG
 # ============================
-RAW_MESSAGES_FILE = r"C:\softwareEngineer\ChatList\backend\controllers\raw_messages.json"
+RAW_MESSAGES_FILE = r"C:\softwareEngineer\ChatList\backend\raw_messages.json"
 SESSION_PATH = r"C:\softwareEngineer\whatsapp_profile"
 TARGET_GROUP = "ChatList"
 SCROLL_PAUSE = 1.5

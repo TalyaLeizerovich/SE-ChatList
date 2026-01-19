@@ -1,3 +1,7 @@
+# ============================
+# Contains the actual test cases and assertions to validate 
+# the application's functional requirements and end-to-end workflows - call task_page.py methods
+# ============================
 import pytest
 import time
 from pages.task_page import TaskPage

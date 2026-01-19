@@ -1,3 +1,7 @@
+# ============================
+# Implements the Page Object Model by defining UI 
+# locators and encapsulating all browser-level interactions.
+# ============================
 import time
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait

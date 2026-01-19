@@ -1,3 +1,7 @@
+# ============================
+# Manages the WebDriver lifecycle and provides shared
+# fixtures to initialize and close the browser session.
+# ============================
 import pytest
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service

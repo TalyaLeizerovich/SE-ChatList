@@ -3,7 +3,7 @@ from altair import Dict
 import pyodbc
 from datetime import datetime
 import re
-from models.encryption_utils import encrypt_text, decrypt_text
+from encryption_utils import encrypt_text, decrypt_text
 
 conn_str = (
     "DRIVER={ODBC Driver 18 for SQL Server};"

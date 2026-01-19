@@ -11,7 +11,7 @@ from googleapiclient.errors import HttpError
 # ============================
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROFILE_DIR = os.path.join(BASE_DIR, "calendar_profile")
 
 TOKEN_PATH = os.path.join(PROFILE_DIR, "token.json")

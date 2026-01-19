@@ -8,15 +8,15 @@ from fastapi import Body
 
 
 # Import existing modules
-import controllers.processing as processing
-import controllers.whatsapp_scraper as whatsapp_scraper
-import models.db as db
-import controllers.calendar_controller as calendar
-from controllers.data_parser import resolve_task_date
+import processing as processing
+import whatsapp_scraper as whatsapp_scraper
+import db as db
+import calendar_controller as calendar
+from data_parser import resolve_task_date
 
 
 # ==================== Configuration ====================
-RAW_MESSAGES_FILE = "controllers/raw_messages.json"
+RAW_MESSAGES_FILE = "raw_messages.json"
 PROCESSED_MESSAGES_FILE = "processed_messages.json"
 
 # --------------------

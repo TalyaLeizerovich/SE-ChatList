@@ -1,8 +1,7 @@
 **Project name: ChatList**
 **Date:** 20/10/2025
-**Participants:** Tamar Klein, ID: 327720512.
-                  Chaya Azmon, ID: 327704482. 
-                  Talya Leizerovich, ID: 215787300
+**Participants:** Talya Leizerovich, Tamar Klein, Chaya Azmon. 
+                  
 
 **Abstract:**
 Every parent or student knows the chaos of school WhatsApp groups - endless chatter mixed with a few important messages you can’t afford to miss. ChatList is a smart AI-powered assistant designed to automatically filter, summarize, and extract action items from group messages.  

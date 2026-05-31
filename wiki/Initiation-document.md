@@ -78,4 +78,4 @@ SMART Objectives:
 
 **Context Diagram:**
 
-![ContextDiagram.png](wiki/images/ContextDiagram.jpg)
+![ContextDiagram.png](images/ContextDiagram.jpg)
